@@ -12,6 +12,7 @@ plugins {
 dependencyResolutionManagement {
     repositories {
         mavenCentral()
+        maven("https://snapshots.kord.dev")
     }
     versionCatalogs {
         create("ktorLibs").from("io.ktor:ktor-version-catalog:3.5.0")

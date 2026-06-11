@@ -1,5 +1,7 @@
-package com.mashiverse
+package com.mashiverse.di
 
+import com.mashiverse.playwright.PlaywrightService
+import com.microsoft.playwright.Browser
 import io.ktor.server.application.*
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
@@ -9,11 +11,11 @@ fun Application.configureKoin() {
     install(Koin) {
         slf4jLogger()
         modules(module {
-            single<HelloService> {
-                HelloService {
-                    println(environment.log.info("Hello, World!"))
-                }
+            single<Browser> {
+                PlaywrightService.getBrowser()
             }
+
+
         })
     }
 }
