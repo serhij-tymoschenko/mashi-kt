@@ -1,0 +1,13 @@
+ktor:
+  deployment:
+    port: 8080
+  application:
+    modules:
+      - com.mashiverse.HttpKt.configureHttp
+      - com.mashiverse.SerializationKt.configureSerialization
+      - com.mashiverse.AutoHeadResponseKt.configureAutoHeadResponse
+      - com.mashiverse.RequestValidationKt.configureRequestValidation
+      - com.mashiverse.DIKt.configureDependencyInjection
+      - com.mashiverse.KoinKt.configureKoin
+      - com.mashiverse.PostgresKt.configurePostgres
+      - com.mashiverse.RoutingKt.configureRouting
