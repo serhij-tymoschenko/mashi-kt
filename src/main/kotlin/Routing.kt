@@ -1,5 +1,6 @@
 package com.mashiverse
 
+import com.mashiverse.configs.DISCORD_TOKEN
 import com.microsoft.playwright.Browser
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -11,7 +12,8 @@ fun Application.configureRouting() {
 
     routing {
         get("/") {
-            call.respondText("Hello, World!")
+            println(DISCORD_TOKEN)
+            call.respond(DISCORD_TOKEN)
         }
         get("/json/kotlinx-serialization") {
             call.respond(mapOf("hello" to "world"))
