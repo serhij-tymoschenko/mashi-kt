@@ -2,8 +2,6 @@
 
 import com.mashiverse.mashi.BuildConfig
 
-
-// Bot
 const val MASHI_BOT_ID = 1428847584965034154
 
 const val RELEASES_CHANNEL_ID = 1419703216979054653

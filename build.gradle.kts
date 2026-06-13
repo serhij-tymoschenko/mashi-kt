@@ -34,10 +34,10 @@ buildConfig {
     }
 
     val discordToken = cleanProperties["DISCORD_TOKEN"] ?: ""
-    val mashitKey = cleanProperties["MASHIT_KEY"] ?: ""
+    val mashitKey = cleanProperties["MASHIT_API_KEY"] ?: ""
 
     buildConfigField("String", "DISCORD_TOKEN", "\"$discordToken\"")
-    buildConfigField("String", "MASHIT_KEY", "\"$mashitKey\"")
+    buildConfigField("String", "MASHIT_API_KEY", "\"$mashitKey\"")
 }
 
 dependencies {
