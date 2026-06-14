@@ -62,4 +62,10 @@ dependencies {
 
     // Kord
     implementation("dev.kord:kord-core:0.18.1")
+
+    // Postgres
+    implementation("org.jetbrains.exposed:exposed-core:0.50.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.50.0")
+    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation("org.postgresql:postgresql:42.7.3")
 }
