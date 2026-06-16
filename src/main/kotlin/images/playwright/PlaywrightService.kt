@@ -1,11 +1,10 @@
-﻿package com.mashiverse.playwright
+﻿package com.mashiverse.images.playwright
 
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.BrowserType
 import com.microsoft.playwright.Playwright
 
 class PlaywrightService {
-
 
     companion object {
         fun getBrowser(): Browser {

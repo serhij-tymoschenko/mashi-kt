@@ -69,4 +69,9 @@ dependencies {
     implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("org.postgresql:postgresql:42.7.3")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.5.0")
+
+    // ImageIO
+    implementation("com.twelvemonkeys.imageio:imageio-core:3.12.0")
+    implementation("com.twelvemonkeys.imageio:imageio-webp:3.12.0")
+    implementation("com.twelvemonkeys.imageio:imageio-metadata:3.12.0")
 }

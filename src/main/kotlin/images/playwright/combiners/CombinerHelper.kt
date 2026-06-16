@@ -1,4 +1,4 @@
-﻿package com.mashiverse.playwright.combiners
+﻿package com.mashiverse.images.playwright.combiners
 
 import com.mashiverse.configs.GIF_HEIGHT
 import com.mashiverse.configs.GIF_TRAIT_HEIGHT

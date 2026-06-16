@@ -20,4 +20,5 @@ const val PNG_TRAIT_WIDTH = 380 * 2
 const val PNG_TRAIT_HEIGHT = 600 * 2
 
 // Other
-const val SEMAPHORE_LIMIT = 20
+const val ANIM_STEP = 0.06
+const val SEMAPHORE_LIMIT = 10

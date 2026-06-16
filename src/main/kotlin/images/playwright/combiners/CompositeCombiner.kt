@@ -1,11 +1,12 @@
-﻿package com.mashiverse.playwright.combiners
+﻿package com.mashiverse.images.playwright.combiners
 
 import com.google.gson.JsonObject
 import com.mashiverse.configs.PNG_HEIGHT
 import com.mashiverse.configs.PNG_WIDTH
-import com.mashiverse.utils.readImageFiles
+import com.mashiverse.utils.helpers.readImageFiles
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.Page
+import com.microsoft.playwright.options.ScreenshotType
 import com.microsoft.playwright.options.ViewportSize
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -49,7 +50,7 @@ class CompositeCombiner : KoinComponent {
             page.screenshot(
                 Page.ScreenshotOptions()
                     .setPath(framePath)
-                    .setType(com.microsoft.playwright.options.ScreenshotType.PNG)
+                    .setType(ScreenshotType.PNG)
                     .setOmitBackground(false)
             )
 

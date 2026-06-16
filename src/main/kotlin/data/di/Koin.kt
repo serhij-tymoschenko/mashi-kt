@@ -1,11 +1,10 @@
 package com.mashiverse.data.di
 
 import com.mashiverse.data.remote.KtorClient
-import com.mashiverse.playwright.PlaywrightService
-import com.mashiverse.playwright.combiners.AnimCombiner
-import com.mashiverse.playwright.combiners.CompositeCombiner
+import com.mashiverse.images.playwright.PlaywrightService
+import com.mashiverse.images.playwright.combiners.AnimCombiner
+import com.mashiverse.images.playwright.combiners.CompositeCombiner
 import com.microsoft.playwright.Browser
-import dev.kord.core.Kord
 import io.ktor.client.HttpClient
 import io.ktor.server.application.*
 import org.koin.dsl.module
