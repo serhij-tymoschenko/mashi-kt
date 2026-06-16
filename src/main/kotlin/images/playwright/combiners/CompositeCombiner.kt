@@ -10,12 +10,13 @@ import com.microsoft.playwright.options.ScreenshotType
 import com.microsoft.playwright.options.ViewportSize
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.nio.file.Path
 import java.nio.file.Paths
 
 class CompositeCombiner : KoinComponent {
     val browser by inject<Browser>()
 
-    fun generateComposite(tempDir: String) {
+    fun generateComposite(tempDir: Path): Path {
         val context = browser.newContext(
             Browser.NewContextOptions().setViewportSize(ViewportSize(PNG_WIDTH, PNG_HEIGHT))
         )
@@ -45,7 +46,7 @@ class CompositeCombiner : KoinComponent {
             )
 
             val frameName = String.format("frame_%03d.png", 0)
-            val framePath = Paths.get(tempDir, frameName)
+            val framePath = tempDir.resolve(frameName)
 
             page.screenshot(
                 Page.ScreenshotOptions()
@@ -55,6 +56,8 @@ class CompositeCombiner : KoinComponent {
             )
 
             page.close()
+
+            return framePath
         } catch (e: Exception) {
             System.err.println("Error in generateGif: ${e.message}")
             throw e

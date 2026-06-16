@@ -15,7 +15,8 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.nio.file.Paths
+import java.nio.file.Path
+import kotlin.io.path.absolutePathString
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -27,7 +28,7 @@ class AnimCombiner : KoinComponent {
         htmlContent: String,
         startFrame: Int,
         endFrame: Int,
-        resourcesDir: String
+        resourcesDir: Path
     ) {
         val page = context.newPage()
 
@@ -48,7 +49,7 @@ class AnimCombiner : KoinComponent {
 
         for (i in startFrame..endFrame) {
             val frameName = String.format("frame_%03d.png", i)
-            val framePath = Paths.get(resourcesDir, frameName)
+            val framePath = resourcesDir.resolve(frameName)
 
             page.screenshot(
                 Page.ScreenshotOptions()
@@ -71,7 +72,7 @@ class AnimCombiner : KoinComponent {
         page.close()
     }
 
-    suspend fun generateAnim(tempDir: String, t: Double): String {
+    suspend fun generateAnim(tempDir: Path, t: Double): Path {
         return withContext(Dispatchers.IO) {
             try {
                 var maxT = t
@@ -126,23 +127,24 @@ class AnimCombiner : KoinComponent {
         }
     }
 
-    private fun makeGif(tempDir: String): String {
-        val palettePath = Paths.get(tempDir, "palette.png").toString()
-        val gifPath = Paths.get(tempDir, "result.gif").toString()
+    private fun makeGif(tempDir: Path): Path {
+        val palettePath = tempDir.resolve("palette.png")
+        val gifPath = tempDir.resolve("result.gif")
+        val ffmpegInputPattern = tempDir.resolve("frame_%03d.png").absolutePathString()
 
         executeCmd(
             "ffmpeg", "-y", "-threads", "0",
-            "-i", "$tempDir/frame_%03d.png",
+            "-i", ffmpegInputPattern,
             "-vf", "format=rgba,palettegen=max_colors=256",
-            palettePath
+            palettePath.absolutePathString()
         )
 
         executeCmd(
             "ffmpeg", "-y", "-threads", "0", "-framerate", "$PLAYBACK_FPS",
-            "-i", "$tempDir/frame_%03d.png",
-            "-i", palettePath,
+            "-i", ffmpegInputPattern,
+            "-i", palettePath.absolutePathString(),
             "-lavfi", "[0:v]format=rgba,setpts=PTS-STARTPTS[v];[v][1:v]paletteuse=dither=none",
-            gifPath
+            gifPath.absolutePathString()
         )
 
         return gifPath

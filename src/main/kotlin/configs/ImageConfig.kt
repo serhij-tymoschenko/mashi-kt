@@ -22,3 +22,17 @@ const val PNG_TRAIT_HEIGHT = 600 * 2
 // Other
 const val ANIM_STEP = 0.06
 const val SEMAPHORE_LIMIT = 10
+
+val LAYER_ORDER = listOf(
+    "background",
+    "hair_back",
+    "cape",
+    "bottom",
+    "upper",
+    "head",
+    "eyes",
+    "hair_front",
+    "hat",
+    "left_accessory",
+    "right_accessory"
+)

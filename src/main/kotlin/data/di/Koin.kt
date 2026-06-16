@@ -1,6 +1,7 @@
 package com.mashiverse.data.di
 
 import com.mashiverse.data.remote.KtorClient
+import com.mashiverse.data.repos.ImageRepo
 import com.mashiverse.images.playwright.PlaywrightService
 import com.mashiverse.images.playwright.combiners.AnimCombiner
 import com.mashiverse.images.playwright.combiners.CompositeCombiner
@@ -29,6 +30,10 @@ fun Application.configureKoin() {
 
             single<HttpClient> {
                 KtorClient.client()
+            }
+
+            single<ImageRepo>{
+                ImageRepo()
             }
         })
     }
