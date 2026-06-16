@@ -33,10 +33,7 @@ class MashitApi : KoinComponent {
 
     suspend fun getMashup(wallet: String): MashupDto? {
         return try {
-            // Fix potential missing trailing slash in config cleanly
-            val sanitizedBase = if (MASHIT_BASE_URL.endsWith("/")) MASHIT_BASE_URL else "$MASHIT_BASE_URL/"
-
-            val response: HttpResponse = client.get("${sanitizedBase}api/mashers/latest") {
+            val response: HttpResponse = client.get("$MASHIT_BASE_URL/mashers/latest") {
                 parameter("wallet", wallet)
             }
 

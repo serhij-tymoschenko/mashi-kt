@@ -2,6 +2,8 @@ package com.mashiverse.data.di
 
 import com.mashiverse.data.remote.KtorClient
 import com.mashiverse.playwright.PlaywrightService
+import com.mashiverse.playwright.combiners.AnimCombiner
+import com.mashiverse.playwright.combiners.CompositeCombiner
 import com.microsoft.playwright.Browser
 import dev.kord.core.Kord
 import io.ktor.client.HttpClient
@@ -16,6 +18,14 @@ fun Application.configureKoin() {
         modules(module {
             single<Browser> {
                 PlaywrightService.getBrowser()
+            }
+
+            single<AnimCombiner> {
+                AnimCombiner()
+            }
+
+            single<CompositeCombiner> {
+                CompositeCombiner()
             }
 
             single<HttpClient> {

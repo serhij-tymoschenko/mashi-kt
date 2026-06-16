@@ -1,7 +1,8 @@
 ﻿package data.remote.dto
 
+import com.mashiverse.data.models.Asset
+import com.mashiverse.data.models.Colors
 import kotlinx.serialization.Serializable
-
 
 @Serializable
 data class MashupDto(
@@ -11,17 +12,4 @@ data class MashupDto(
     val colors: Colors,
     val count: Int,
     val assets: List<Asset>
-) {
-    @Serializable
-    data class Asset(
-        val name: String,
-        val image: String
-    )
-
-    @Serializable
-    data class Colors(
-        val base: String,
-        val eyes: String,
-        val hair: String
-    )
-}
+)

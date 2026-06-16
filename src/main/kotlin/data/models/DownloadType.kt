@@ -1,4 +1,4 @@
-﻿package com.mashiverse.data.models
+﻿package data.models
 
 enum class DownloadType(extension: String) {
     PNG("PNG"),
