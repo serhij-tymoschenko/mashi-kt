@@ -97,8 +97,7 @@ class AnimCombiner : KoinComponent {
 
                     if (startFrame <= endFrame) {
                         async {
-                            val browser = PlaywrightService.getBrowser()
-                            browser.use { browser ->
+                            PlaywrightService.getBrowser().use { browser ->
                                 val browserCtx = browser.newContext(
                                     Browser.NewContextOptions().setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
                                 )
@@ -111,8 +110,6 @@ class AnimCombiner : KoinComponent {
                                     resourcesDir = tempDir
                                 )
                             }
-
-                            browser.close()
                         }
                     } else {
                         null
