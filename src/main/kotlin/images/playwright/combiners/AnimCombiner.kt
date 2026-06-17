@@ -75,7 +75,7 @@ class AnimCombiner : KoinComponent {
             try {
                 var maxT = t
                 print(maxT)
-                if (maxT < DURATION_LIMIT_SEC ) {
+                if (maxT < DURATION_LIMIT_SEC) {
                     maxT *= ceil(DURATION_LIMIT_SEC / maxT)
                 }
 
@@ -133,16 +133,20 @@ class AnimCombiner : KoinComponent {
 
         executeCmd(
             "ffmpeg", "-y", "-threads", "0",
+            "-framerate", "$PLAYBACK_FPS", // <-- ADD THIS HERE
             "-i", ffmpegInputPattern,
             "-vf", "format=rgba,palettegen=max_colors=256",
             palettePath.absolutePathString()
         )
 
         executeCmd(
-            "ffmpeg", "-y", "-threads", "0", "-framerate", "$PLAYBACK_FPS",
+            "ffmpeg", "-y", "-threads", "0",
+            "-framerate", "$PLAYBACK_FPS", // This handles input speed
             "-i", ffmpegInputPattern,
             "-i", palettePath.absolutePathString(),
-            "-lavfi", "[0:v]format=rgba,setpts=PTS-STARTPTS[v];[v][1:v]paletteuse=dither=none",
+            // Added fps=$PLAYBACK_FPS to the filtergraph to force strict timing
+            "-lavfi", "[0:v]format=rgba,fps=$PLAYBACK_FPS,setpts=PTS-STARTPTS[v];[v][1:v]paletteuse=dither=none",
+            "-r", "${PLAYBACK_FPS * 2}", // <-- ADD THIS HERE to force output container speed
             gifPath.absolutePathString()
         )
 
