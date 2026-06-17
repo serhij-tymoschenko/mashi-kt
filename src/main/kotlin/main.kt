@@ -11,22 +11,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(PrivilegedIntent::class)
-suspend fun main(args: Array<String>) {
-    val token = BuildConfig.DISCORD_TOKEN
-    val kord = Kord(token)
-
-    val bot = MashiBot.initialize(kord)
-    bot.setup()
-
-    CoroutineScope(Dispatchers.Default).launch {
-        kord.login {
-            intents = Intents {
-                +Intent.Guilds
-                +Intent.GuildMembers
-                +Intent.GuildMessageReactions
-            }
-        }
-    }
-
+fun main(args: Array<String>) {
     io.ktor.server.netty.EngineMain.main(args)
 }

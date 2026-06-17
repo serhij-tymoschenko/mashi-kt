@@ -22,10 +22,10 @@ class WalletModule(private val kord: Kord) : KoinComponent {
 
     private fun registerCommands() {
         kord.launch {
-            kord.createGuildChatInputCommand(Snowflake(TEST_CHANNEL_ID), "connect_wallet", "Connect wallet") {
+            kord.createGuildChatInputCommand(Snowflake(1419701957995659317), "connect_wallet", "Connect wallet") {
                 string("wallet", "Wallet") { required = true }
             }
-            kord.createGuildChatInputCommand(Snowflake(TEST_CHANNEL_ID), "disconnect_wallet", "Disconnect wallet")
+            kord.createGuildChatInputCommand(Snowflake(1419701957995659317), "disconnect_wallet", "Disconnect wallet")
         }
     }
 

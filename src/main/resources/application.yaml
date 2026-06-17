@@ -9,3 +9,4 @@ ktor:
       - com.mashiverse.data.di.KoinKt.configureKoin
       - com.mashiverse.server.routes.CorrectionRoutesKt.correctionRoutes
       - com.mashiverse.server.routes.NotifyRoutesKt.notifyRoutes
+      - com.mashiverse.utils.other.BotKt.bot

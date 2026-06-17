@@ -47,6 +47,7 @@ dependencies {
     implementation(ktorLibs.server.core)
     implementation(ktorLibs.server.cors)
     implementation(ktorLibs.server.httpRedirect)
+    implementation(ktorLibs.client.logging)
     implementation(ktorLibs.server.netty)
     implementation(libs.h2database.h2)
     implementation(ktorLibs.client.cio)

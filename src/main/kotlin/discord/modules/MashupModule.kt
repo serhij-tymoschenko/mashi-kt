@@ -36,13 +36,13 @@ class MashupModule(private val kord: Kord) : KoinComponent {
 
     private fun registerCommands() {
         kord.launch {
-            kord.createGuildChatInputCommand(Snowflake(TEST_CHANNEL_ID), "mashi", "Generates mashup") {
+            kord.createGuildChatInputCommand(Snowflake(1419701957995659317), "mashi", "Generates mashup") {
                 string("image", "Image type") {
                     choice("PNG", "PNG")
                     choice("GIF", "GIF")
                 }
             }
-            kord.createGuildChatInputCommand(Snowflake(TEST_CHANNEL_ID), "delete_mashup", "Deletes mashup") {
+            kord.createGuildChatInputCommand(Snowflake(1419701957995659317), "delete_mashup", "Deletes mashup") {
                 string("msg_id", "Message id on right click") { required = true }
             }
         }

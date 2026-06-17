@@ -22,11 +22,9 @@ RUN ./gradlew installDist --no-daemon
 # ==========================================
 # Stage 2: Create the runtime image
 # ==========================================
-# Playwright requires a full Ubuntu/Debian base to run browsers,
-# and their official image comes with all necessary dependencies.
 FROM mcr.microsoft.com/playwright:v1.49.0-noble AS runtime
 
-# Install OpenJDK 21 and OpenCV-required native libs (glibc/libstdc++)
+# Install OpenJDK 21 and OpenCV-required native libs
 RUN apt-get update && apt-get install -y \
     openjdk-21-jre-headless \
     libopencv-dev \
@@ -34,15 +32,16 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy the built application from the build stage
-# Note: Adjust 'build/install/app' if your root project folder name is different
-COPY --from=build /app/build/install/* ./
+# 1. Copy the built distribution contents directly into /app
+# This flattens the project-name subfolder so bin/ and lib/ are in the root
+COPY --from=build /app/build/install/* /app/
 
-# Expose Ktor default port
-EXPOSE 3000
-
-# Environment variable to ensure Playwright knows where to find its browsers
+# Environment variable for Playwright browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Run the Ktor application using the generated startup script
-CMD ["./bin/app"]
+EXPOSE 3000
+
+# 2. Dynamically execute the only file in the bin directory,
+# preventing hardcoding issues if your project name changes.
+CMD ["sh", "-c", "./bin/* 2>&1"]
