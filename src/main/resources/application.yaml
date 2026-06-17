@@ -3,9 +3,8 @@ ktor:
     port: 3000
   application:
     modules:
-      - com.mashiverse.HttpKt.configureHttp
-      - com.mashiverse.SerializationKt.configureSerialization
-      - com.mashiverse.PostgresKt.configurePostgres
+      - com.mashiverse.utils.other.HttpKt.configureHttp
+      - com.mashiverse.utils.other.SerializationKt.configureSerialization
       - com.mashiverse.server.routes.MashupRoutesKt.mashupRoutes
       - com.mashiverse.data.di.KoinKt.configureKoin
       - com.mashiverse.server.routes.CorrectionRoutesKt.correctionRoutes

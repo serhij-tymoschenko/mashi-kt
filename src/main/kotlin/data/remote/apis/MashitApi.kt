@@ -3,7 +3,6 @@
 import com.mashiverse.configs.MASHIT_BASE_URL
 import com.mashiverse.configs.MASHIT_API_KEY
 import com.mashiverse.data.remote.KtorClient
-import com.mashiverse.data.remote.dto.ListingDto
 import data.remote.dto.MashupDto
 import io.ktor.client.HttpClient
 
@@ -17,19 +16,6 @@ import kotlin.getValue
 
 class MashitApi : KoinComponent {
     private val client by inject<HttpClient>()
-
-    suspend fun getShopItem(itemId: String, apiKey: String = MASHIT_API_KEY): ListingDto {
-        val response = client.get("$MASHIT_BASE_URL/api/v1/listings/$itemId") {
-            parameter("apiKey", apiKey)
-        }
-
-        if (!response.status.isSuccess()) {
-            throw IllegalStateException("HTTP Error: ${response.status} while fetching item $itemId")
-        }
-
-        // Ktor seamlessly deserializes JSON directly into your type-safe DTO class
-        return response.body()
-    }
 
     suspend fun getMashup(wallet: String): MashupDto? {
         return try {
