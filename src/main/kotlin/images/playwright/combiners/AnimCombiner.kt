@@ -75,8 +75,8 @@ class AnimCombiner : KoinComponent {
             try {
                 var maxT = t
                 print(maxT)
-                if (maxT < DURATION_LIMIT_SEC * 2) {
-                    maxT *= ceil(DURATION_LIMIT_SEC * 2 / maxT)
+                if (maxT < DURATION_LIMIT_SEC ) {
+                    maxT *= ceil(DURATION_LIMIT_SEC / maxT)
                 }
 
                 val totalFrames = ceil(maxT * CAPTURE_FPS).toInt()

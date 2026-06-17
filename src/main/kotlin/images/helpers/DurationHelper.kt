@@ -7,6 +7,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
+import java.util.Locale
 import javax.imageio.ImageIO
 import javax.imageio.metadata.IIOMetadataNode
 
@@ -122,12 +123,16 @@ private fun getDuration(data: ByteArray): Double {
 }
 
 suspend fun getMaxDuration(traits: List<ByteArray>): Double {
-    return withContext(Dispatchers.IO) {
+    val max = withContext(Dispatchers.IO) {
         val jobs = traits.map { trait ->
             async { getDuration(trait) }
         }
 
         val durations = jobs.awaitAll()
-        return@withContext durations.max()
+        // Handle potential empty list to avoid NoSuchElementException
+        durations.maxOrNull() ?: 0.0
     }
+
+    // Formats to 2 decimal places and converts back to Double
+    return String.format(Locale.US, "%.2f", max).toDouble()
 }
