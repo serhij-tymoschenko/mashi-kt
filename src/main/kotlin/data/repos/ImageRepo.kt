@@ -53,7 +53,6 @@ class ImageRepo : KoinComponent {
                         data = data, body = colors.base, eyes = colors.eyes, hair = colors.hair
                     )
                 }
-
                 Pair(name, data)
             } catch (e: Exception) {
                 null

@@ -2,6 +2,7 @@
 
 import com.google.gson.JsonObject
 import com.mashiverse.configs.*
+import com.mashiverse.images.playwright.PlaywrightService
 import com.mashiverse.utils.helpers.executeCmd
 import com.mashiverse.utils.helpers.readImageFiles
 import com.microsoft.playwright.Browser
@@ -98,19 +99,22 @@ class AnimCombiner : KoinComponent {
 
                     if (startFrame <= endFrame) {
                         async {
-                            val browserCtx = browser.newContext(
-                                Browser.NewContextOptions().setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
-                            )
+                            val browser = PlaywrightService.getBrowser()
+                            browser.use { browser ->
+                                val browserCtx = browser.newContext(
+                                    Browser.NewContextOptions().setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
+                                )
 
-                            browserCtx.use { ctx ->
                                 renderFrameRange(
-                                    context = ctx,
+                                    context = browserCtx,
                                     htmlContent = htmlContent,
                                     startFrame = startFrame,
                                     endFrame = endFrame,
                                     resourcesDir = tempDir
                                 )
                             }
+
+                            browser.close()
                         }
                     } else {
                         null

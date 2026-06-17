@@ -1,17 +1,21 @@
 ﻿package com.mashiverse.server.routes
 
 import com.mashiverse.data.models.Mashup
+import com.mashiverse.data.repos.ImageRepo
 import data.models.DownloadType
 import data.remote.dto.MashupDto
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.Application
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.post
-import io.ktor.server.routing.routing
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.utils.io.jvm.javaio.toOutputStream
+import org.koin.ktor.ext.inject
+import java.io.ByteArrayInputStream
 
 fun Application.mashupRoutes() {
+    val imageRepo by inject<ImageRepo>()
+
     routing {
         post("/api/mashi/app_mashup") {
             try {
@@ -36,7 +40,24 @@ fun Application.mashupRoutes() {
 
                 val downloadType = DownloadType.valueOf(downloadTypeParam.uppercase())
 
-                val image: ByteArray? =
+                val image: ByteArray? = imageRepo.getImage(
+                    mashup = mashup,
+                    downloadType = downloadType,
+                    mintedName = mintedName
+                )
+
+                if (image == null) {
+                    call.respond(HttpStatusCode.InternalServerError)
+                    return@post
+                }
+
+                val inputStream = ByteArrayInputStream(image)
+                call.respondBytesWriter(contentType = mediaType) {
+                    inputStream.copyTo(this.toOutputStream())
+                }
+            } catch (e: Exception) {
+                println(e.localizedMessage)
+                call.respond(HttpStatusCode.InternalServerError)
             }
         }
     }

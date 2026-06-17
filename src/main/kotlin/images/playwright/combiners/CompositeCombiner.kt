@@ -3,6 +3,7 @@
 import com.google.gson.JsonObject
 import com.mashiverse.configs.PNG_HEIGHT
 import com.mashiverse.configs.PNG_WIDTH
+import com.mashiverse.images.playwright.PlaywrightService
 import com.mashiverse.utils.helpers.readImageFiles
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.Page
@@ -14,9 +15,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 class CompositeCombiner : KoinComponent {
-    val browser by inject<Browser>()
-
     fun generateComposite(tempDir: Path): Path {
+        val browser = PlaywrightService.getBrowser()
         val context = browser.newContext(
             Browser.NewContextOptions().setViewportSize(ViewportSize(PNG_WIDTH, PNG_HEIGHT))
         )
@@ -63,6 +63,7 @@ class CompositeCombiner : KoinComponent {
             throw e
         } finally {
             context.close()
+            browser.close()
         }
     }
 }

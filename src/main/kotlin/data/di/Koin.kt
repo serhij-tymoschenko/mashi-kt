@@ -16,10 +16,6 @@ fun Application.configureKoin() {
     install(Koin) {
         slf4jLogger()
         modules(module {
-            single<Browser> {
-                PlaywrightService.getBrowser()
-            }
-
             single<AnimCombiner> {
                 AnimCombiner()
             }

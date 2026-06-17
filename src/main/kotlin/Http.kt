@@ -11,10 +11,4 @@ fun Application.configureHttp() {
         allowMethod(HttpMethod.Get)
         anyHost() // @TODO: Don't do this in production if possible. Try to limit it.
     }
-//    install(HttpsRedirect) {
-//        // The port to redirect to. By default 443, the default HTTPS port.
-//        sslPort = 443
-//        // 301 Moved Permanently, or 302 Found redirect.
-//        permanentRedirect = true
-//    }
 }

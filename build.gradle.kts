@@ -49,6 +49,7 @@ dependencies {
     implementation(ktorLibs.server.httpRedirect)
     implementation(ktorLibs.server.netty)
     implementation(libs.h2database.h2)
+    implementation(ktorLibs.client.cio)
     implementation(libs.koin.ktor)
     implementation(libs.koin.loggerSlf4j)
     implementation(libs.logback.classic)

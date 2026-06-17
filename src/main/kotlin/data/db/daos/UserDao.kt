@@ -18,6 +18,7 @@ class UserDao {
             conn.createStatement().use { stmt ->
                 stmt.executeUpdate(queries.createTable)
             }
+            conn.commit()
         }
     }
 

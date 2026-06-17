@@ -15,7 +15,12 @@ class PlaywrightService {
                 "--disable-software-rasterizer",
                 "--disable-gpu-compositing",
                 "--disable-gpu-rasterization",
-                "--headless=new"
+                "--headless=new",
+                "--disable-extensions",
+                "--disable-background-networking",
+                "--disable-default-apps",
+                "--no-first-run",
+                "--disable-dev-shm-usage"
             )
 
             val launchOptions = BrowserType.LaunchOptions()
