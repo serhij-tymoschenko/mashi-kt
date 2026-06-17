@@ -13,35 +13,31 @@ RUN chmod +x ./gradlew
 
 # Copy the rest of the application source code
 COPY src ./src
-# Copy your keys.properties if needed during build (ensure it's ignored in .dockerignore if sensitive)
 COPY keys.properties* ./
 
-# Build the fat JAR / distribution (Ktor uses installDist or build)
+# Build the distribution allocation
 RUN ./gradlew installDist --no-daemon
 
 # ==========================================
 # Stage 2: Create the runtime image
 # ==========================================
-FROM mcr.microsoft.com/playwright:v1.49.0-noble AS runtime
+FROM mcr.microsoft.com/playwright/java:v1.59.0-noble AS runtime
 
-# Install OpenJDK 21 and OpenCV-required native libs
+# Install native dependencies required for OpenCV/OpenPNP AND ffmpeg for frame processing
 RUN apt-get update && apt-get install -y \
-    openjdk-21-jre-headless \
     libopencv-dev \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 1. Copy the built distribution contents directly into /app
-# This flattens the project-name subfolder so bin/ and lib/ are in the root
+# Copy the built distribution contents directly into /app (flattens structure)
 COPY --from=build /app/build/install/* /app/
 
-# Environment variable for Playwright browsers
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Tell Playwright to look for the system browsers baked into this image
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 EXPOSE 3000
 
-# 2. Dynamically execute the only file in the bin directory,
-# preventing hardcoding issues if your project name changes.
+# Dynamically execute the generated start script
 CMD ["sh", "-c", "./bin/* 2>&1"]
