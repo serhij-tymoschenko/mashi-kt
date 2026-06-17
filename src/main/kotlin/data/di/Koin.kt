@@ -1,6 +1,11 @@
 package com.mashiverse.data.di
 
+import com.mashiverse.data.db.daos.ImageDao
+import com.mashiverse.data.db.daos.ReactionsDao
+import com.mashiverse.data.db.daos.UserDao
+import com.mashiverse.data.db.entities.User
 import com.mashiverse.data.remote.KtorClient
+import com.mashiverse.data.remote.apis.IpfsApi
 import com.mashiverse.data.repos.ImageRepo
 import com.mashiverse.images.playwright.combiners.AnimCombiner
 import com.mashiverse.images.playwright.combiners.CompositeCombiner
@@ -27,8 +32,24 @@ fun Application.configureKoin() {
                 ImageService()
             }
 
+            factory<UserDao> {
+                UserDao()
+            }
+
+            factory<ReactionsDao> {
+                ReactionsDao()
+            }
+
+            factory<ImageDao> {
+                ImageDao()
+            }
+
             single<CompositeCombiner> {
                 CompositeCombiner()
+            }
+
+            factory<IpfsApi> {
+                IpfsApi()
             }
 
             single<HttpClient> {

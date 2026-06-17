@@ -1,3 +1,5 @@
 ﻿# Project exclude paths
 /.gradle/
 /keys.properties
+/mash-it-android-app-firebase-adminsdk-fbsvc-bb09c6be56.json
+/mash-it-ios-firebase-adminsdk-fbsvc-149787883e.json

@@ -1,10 +1,32 @@
 package com.mashiverse
 
-import io.ktor.server.engine.*
-import io.ktor.server.application.*
-import org.koin.plugin.module.dsl.startKoin
+import com.mashiverse.discord.MashiBot
+import com.mashiverse.mashi.BuildConfig
+import dev.kord.core.Kord
+import dev.kord.gateway.Intent
+import dev.kord.gateway.Intents
+import dev.kord.gateway.PrivilegedIntent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
-fun main(args: Array<String>) {
+@OptIn(PrivilegedIntent::class)
+suspend fun main(args: Array<String>) {
+//    val token = BuildConfig.DISCORD_TOKEN
+//    val kord = Kord(token)
+//
+//    val bot = MashiBot.initialize(kord)
+//    bot.setup()
+//
+//    CoroutineScope(Dispatchers.Default).launch {
+//        kord.login {
+//            intents = Intents {
+//                +Intent.Guilds
+//                +Intent.GuildMembers
+//                +Intent.GuildMessageReactions
+//            }
+//        }
+//    }
 
     io.ktor.server.netty.EngineMain.main(args)
 }

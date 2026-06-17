@@ -8,3 +8,4 @@ ktor:
       - com.mashiverse.PostgresKt.configurePostgres
       - com.mashiverse.server.routes.MashupRoutesKt.mashupRoutes
       - com.mashiverse.data.di.KoinKt.configureKoin
+      - com.mashiverse.server.routes.CorrectionRoutesKt.correctionRoutes

@@ -31,8 +31,8 @@ import java.util.*
 class ImageRepo : KoinComponent {
     private val animCombiner by inject<AnimCombiner>()
     private val compositeCombiner by inject<CompositeCombiner>()
-    private val imageDao = ImageDao()
-    private val ipfsApi = IpfsApi()
+    private val imageDao by inject<ImageDao>()
+    private val ipfsApi by inject<IpfsApi>()
 
     private suspend fun getAsset(asset: Asset, colors: Colors): Pair<String, ByteArray>? {
         return withContext(Dispatchers.IO) {

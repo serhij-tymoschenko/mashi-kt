@@ -64,6 +64,14 @@ dependencies {
     // Kord
     implementation("dev.kord:kord-core:0.18.1")
 
+    // Admin
+    implementation("com.google.firebase:firebase-admin:9.3.0")
+
+    // OpenCV
+    implementation("com.sksamuel.scrimage:scrimage-core:4.1.3")
+    implementation("com.sksamuel.scrimage:scrimage-webp:4.1.3")
+    implementation("org.openpnp:opencv:4.9.0-0")
+
     // Postgres
     implementation("org.jetbrains.exposed:exposed-core:0.50.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:0.50.0")
