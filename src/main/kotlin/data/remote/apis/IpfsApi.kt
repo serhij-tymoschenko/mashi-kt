@@ -9,35 +9,37 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import kotlin.time.Duration.Companion.milliseconds
 
-
 class IpfsApi : KoinComponent {
     private val client by inject<HttpClient>()
 
     suspend fun getImageSrc(imageUrl: String, maxRetries: Int = 5): ByteArray? {
-        val url = imageUrl.replace("ipfs.", "ipfs.filebase.")
+        // Construct the list of URLs to fallback through, mirroring your Python array
+        val urlsToTry = listOf(
+            imageUrl,
+            imageUrl.replace("ipfs.", "ipfs.filebase.")
+        )
 
-        for (attempt in 0 until maxRetries) {
-            try {
-                // Execute a plain GET request expecting raw binary data back
-                val response = client.get(url) {
-                    // Ktor equivalents to setting timeouts can be done via HttpTimeout plugin if needed globally,
-                    // but plain requests default to standard CIO connection thresholds.
+        for (url in urlsToTry) {
+            for (attempt in 0 until maxRetries) {
+                try {
+                    val response = client.get(url)
+
+                    if (response.status == HttpStatusCode.OK) {
+                        return response.bodyAsBytes()
+                    }
+
+                    if (response.status == HttpStatusCode.NotFound) {
+                        // Break out of the inner retry loop to try the next URL immediately
+                        break
+                    }
+
+                } catch (e: Exception) {
+                    println("Attempt ${attempt + 1} failed for $url: ${e.localizedMessage}")
                 }
 
-                if (response.status == HttpStatusCode.OK) {
-                    return response.bodyAsBytes()
-                }
-
-                if (response.status == HttpStatusCode.NotFound) {
-                    break // Fall through to next URL base immediately on 404
-                }
-
-            } catch (e: Exception) {
-                println("Attempt ${attempt + 1} failed for $url: ${e.localizedMessage}")
+                // Non-blocking coroutine delay before the next retry attempt
+                delay(1000.milliseconds)
             }
-
-            // Pure non-blocking coroutine suspension delay (Replaces time.sleep)
-            delay(1000.milliseconds)
         }
 
         return null
