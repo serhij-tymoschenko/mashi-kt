@@ -10,9 +10,7 @@ import com.microsoft.playwright.Page
 import com.microsoft.playwright.options.ScreenshotType
 import com.microsoft.playwright.options.ViewportSize
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import java.nio.file.Path
-import java.nio.file.Paths
 
 class CompositeCombiner : KoinComponent {
     fun generateComposite(tempDir: Path): Path {

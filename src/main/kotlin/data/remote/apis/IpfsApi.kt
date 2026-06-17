@@ -11,7 +11,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 
 class IpfsApi : KoinComponent {
-    val client by inject<HttpClient>()
+    private val client by inject<HttpClient>()
 
     suspend fun getImageSrc(imageUrl: String, maxRetries: Int = 5): ByteArray? {
         val url = imageUrl.replace("ipfs.", "ipfs.filebase.")

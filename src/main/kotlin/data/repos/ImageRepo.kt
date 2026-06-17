@@ -1,6 +1,8 @@
 ﻿package com.mashiverse.data.repos
 
 import com.mashiverse.configs.LAYER_ORDER
+import com.mashiverse.configs.animSemaphore
+import com.mashiverse.configs.compositeSemaphore
 import com.mashiverse.data.db.daos.ImageDao
 import com.mashiverse.data.models.Asset
 import com.mashiverse.data.models.Colors
@@ -17,6 +19,7 @@ import data.models.DownloadType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -100,10 +103,14 @@ class ImageRepo : KoinComponent {
                 }
 
                 val imagePath: Path = if (downloadType == DownloadType.PNG) {
-                    compositeCombiner.generateComposite(uniqueDir)
+                    compositeSemaphore.withPermit {
+                        compositeCombiner.generateComposite(uniqueDir)
+                    }
                 } else {
                     val maxT = getMaxDuration(traits)
-                    animCombiner.generateAnim(uniqueDir, maxT)
+                    animSemaphore.withPermit {
+                        animCombiner.generateAnim(uniqueDir, maxT)
+                    }
                 }
 
                 return@withContext readFile(imagePath)

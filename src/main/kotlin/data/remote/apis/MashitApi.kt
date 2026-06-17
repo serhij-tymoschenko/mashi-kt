@@ -16,7 +16,7 @@ import org.koin.core.component.inject
 import kotlin.getValue
 
 class MashitApi : KoinComponent {
-    val client by inject<HttpClient>()
+    private val client by inject<HttpClient>()
 
     suspend fun getShopItem(itemId: String, apiKey: String = MASHIT_API_KEY): ListingDto {
         val response = client.get("$MASHIT_BASE_URL/api/v1/listings/$itemId") {

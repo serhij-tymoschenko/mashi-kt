@@ -4,6 +4,7 @@ import com.mashiverse.data.models.Mashup
 import com.mashiverse.data.repos.ImageRepo
 import data.models.DownloadType
 import data.remote.dto.MashupDto
+import images.services.ImageService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -14,7 +15,7 @@ import org.koin.ktor.ext.inject
 import java.io.ByteArrayInputStream
 
 fun Application.mashupRoutes() {
-    val imageRepo by inject<ImageRepo>()
+    val imageService by inject<ImageService>()
 
     routing {
         post("/api/mashi/app_mashup") {
@@ -40,7 +41,7 @@ fun Application.mashupRoutes() {
 
                 val downloadType = DownloadType.valueOf(downloadTypeParam.uppercase())
 
-                val image: ByteArray? = imageRepo.getImage(
+                val image: ByteArray? = imageService.requestComposite(
                     mashup = mashup,
                     downloadType = downloadType,
                     mintedName = mintedName

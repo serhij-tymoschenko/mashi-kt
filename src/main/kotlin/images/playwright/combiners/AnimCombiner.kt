@@ -15,15 +15,12 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.math.ceil
 import kotlin.math.min
 
 class AnimCombiner : KoinComponent {
-    val browser by inject<Browser>()
-
     fun renderFrameRange(
         context: BrowserContext,
         htmlContent: String,
@@ -77,8 +74,9 @@ class AnimCombiner : KoinComponent {
         return withContext(Dispatchers.IO) {
             try {
                 var maxT = t
-                if (maxT < DURATIONS_LIMIT_SEC) {
-                    maxT *= ceil(DURATIONS_LIMIT_SEC / maxT)
+                print(maxT)
+                if (maxT < DURATION_LIMIT_SEC * 2) {
+                    maxT *= ceil(DURATION_LIMIT_SEC * 2 / maxT)
                 }
 
                 val totalFrames = ceil(maxT * CAPTURE_FPS).toInt()

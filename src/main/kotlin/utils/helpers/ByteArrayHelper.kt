@@ -14,7 +14,3 @@ fun ByteArray.indexOfSequence(sequence: ByteArray, startIndex: Int = 0): Int {
     }
     return -1
 }
-
-fun ByteArray.readUShortBE(offset: Int): Int {
-    return ((this[offset].toInt() and 0xFF) shl 8) or (this[offset + 1].toInt() and 0xFF)
-}

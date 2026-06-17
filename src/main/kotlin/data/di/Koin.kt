@@ -2,10 +2,9 @@ package com.mashiverse.data.di
 
 import com.mashiverse.data.remote.KtorClient
 import com.mashiverse.data.repos.ImageRepo
-import com.mashiverse.images.playwright.PlaywrightService
 import com.mashiverse.images.playwright.combiners.AnimCombiner
 import com.mashiverse.images.playwright.combiners.CompositeCombiner
-import com.microsoft.playwright.Browser
+import images.services.ImageService
 import io.ktor.client.HttpClient
 import io.ktor.server.application.*
 import org.koin.dsl.module
@@ -18,6 +17,14 @@ fun Application.configureKoin() {
         modules(module {
             single<AnimCombiner> {
                 AnimCombiner()
+            }
+
+            single<ImageRepo> {
+                ImageRepo()
+            }
+
+            single<ImageService> {
+                ImageService()
             }
 
             single<CompositeCombiner> {
