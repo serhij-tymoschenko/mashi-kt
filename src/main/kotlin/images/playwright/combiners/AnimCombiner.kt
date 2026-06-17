@@ -11,14 +11,16 @@ import com.microsoft.playwright.Page
 import com.microsoft.playwright.options.ScreenshotType
 import com.microsoft.playwright.options.ViewportSize
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.math.ceil
+import kotlin.math.min
 
 class AnimCombiner : KoinComponent {
-
     fun renderFrameRange(
         context: BrowserContext,
         htmlContent: String,
@@ -72,7 +74,8 @@ class AnimCombiner : KoinComponent {
         return withContext(Dispatchers.IO) {
             try {
                 var maxT = t
-                if (maxT < DURATION_LIMIT_SEC) {
+                print(maxT)
+                if (maxT < DURATION_LIMIT_SEC ) {
                     maxT *= ceil(DURATION_LIMIT_SEC / maxT)
                 }
 
@@ -85,23 +88,38 @@ class AnimCombiner : KoinComponent {
                     height = GIF_HEIGHT
                 )
 
-                val browser = PlaywrightService.getBrowser()
+                val totalJobs = 4
+                val chunkSize = (totalFrames + totalJobs - 1) / totalJobs
 
-                // Using .use auto-closes the browser properly when done
-                browser.use { b ->
-                    val browserCtx = b.newContext(
-                        Browser.NewContextOptions().setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
-                    )
+                val jobs = (0 until totalJobs).mapNotNull { i ->
+                    val startFrame = i * chunkSize
+                    val endFrame = min((i + 1) * chunkSize - 1, totalFrames)
 
-                    // Render linearly to preserve animation states seamlessly
-                    renderFrameRange(
-                        context = browserCtx,
-                        htmlContent = htmlContent,
-                        startFrame = 0,
-                        endFrame = totalFrames - 1,
-                        resourcesDir = tempDir
-                    )
+                    if (startFrame <= endFrame) {
+                        async {
+                            val browser = PlaywrightService.getBrowser()
+                            browser.use { browser ->
+                                val browserCtx = browser.newContext(
+                                    Browser.NewContextOptions().setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
+                                )
+
+                                renderFrameRange(
+                                    context = browserCtx,
+                                    htmlContent = htmlContent,
+                                    startFrame = startFrame,
+                                    endFrame = endFrame,
+                                    resourcesDir = tempDir
+                                )
+                            }
+
+                            browser.close()
+                        }
+                    } else {
+                        null
+                    }
                 }
+
+                jobs.awaitAll()
 
                 return@withContext makeGif(tempDir)
             } catch (e: Exception) {
@@ -116,18 +134,15 @@ class AnimCombiner : KoinComponent {
         val gifPath = tempDir.resolve("result.gif")
         val ffmpegInputPattern = tempDir.resolve("frame_%03d.png").absolutePathString()
 
-        // Explicitly passed framerate to input parsing for absolute precision
         executeCmd(
             "ffmpeg", "-y", "-threads", "0",
-            "-framerate", "$PLAYBACK_FPS",
             "-i", ffmpegInputPattern,
             "-vf", "format=rgba,palettegen=max_colors=256",
             palettePath.absolutePathString()
         )
 
         executeCmd(
-            "ffmpeg", "-y", "-threads", "0",
-            "-framerate", "$PLAYBACK_FPS",
+            "ffmpeg", "-y", "-threads", "0", "-framerate", "$PLAYBACK_FPS",
             "-i", ffmpegInputPattern,
             "-i", palettePath.absolutePathString(),
             "-lavfi", "[0:v]format=rgba,setpts=PTS-STARTPTS[v];[v][1:v]paletteuse=dither=none",
