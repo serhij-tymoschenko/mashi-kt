@@ -33,7 +33,7 @@ class MashitApi : KoinComponent {
 
     suspend fun getMashup(wallet: String): MashupDto? {
         return try {
-            val response: HttpResponse = client.get("$MASHIT_BASE_URL/mashers/latest") {
+            val response: HttpResponse = client.get("$MASHIT_BASE_URL/api/mashers/latest") {
                 parameter("wallet", wallet)
             }
 

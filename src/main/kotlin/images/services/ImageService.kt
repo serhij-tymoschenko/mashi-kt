@@ -12,6 +12,7 @@ import org.koin.core.component.inject
 
 class ImageService : KoinComponent {
     private val imageRepo by inject<ImageRepo>()
+
     suspend fun requestComposite(
         wallet: String? = null,
         mashup: Mashup? = null,
@@ -32,7 +33,7 @@ class ImageService : KoinComponent {
                 if (input == null) return@withContext null
 
                 return@withContext imageRepo.getImage(
-                    mashup = mashup!!,
+                    mashup = input,
                     downloadType = downloadType,
                     mintedName = mintedName
                 )

@@ -61,5 +61,59 @@ fun Application.mashupRoutes() {
                 call.respond(HttpStatusCode.InternalServerError)
             }
         }
+
+        get("/api/mashi/mashup/{wallet}") {
+            try {
+                val wallet =
+                    call.parameters["wallet"]
+                        ?: return@get call.respond(
+                            HttpStatusCode.BadRequest,
+                            "Wallet is required"
+                        )
+
+                val downloadTypeParam =
+                    call.request.queryParameters["download_type"] ?: "png"
+
+                val mediaType = when (downloadTypeParam.lowercase()) {
+                    "png" -> ContentType.Image.PNG
+                    "gif" -> ContentType.Image.GIF
+                    else -> {
+                        call.respond(
+                            HttpStatusCode.BadRequest
+                        )
+                        return@get
+                    }
+                }
+
+                val downloadType =
+                    DownloadType.valueOf(downloadTypeParam.uppercase())
+
+                val data: ByteArray? =
+                    imageService.requestComposite(
+                        wallet = wallet,
+                        downloadType = downloadType
+                    )
+
+                if (data == null) {
+                    call.respond(
+                        HttpStatusCode.NotFound,
+                        "No mashup found for this wallet"
+                    )
+                    return@get
+                }
+
+                call.respondBytes(
+                    bytes = data,
+                    contentType = mediaType
+                )
+
+            } catch (e: Exception) {
+                println(e.localizedMessage)
+
+                call.respond(
+                    HttpStatusCode.InternalServerError
+                )
+            }
+        }
     }
 }
