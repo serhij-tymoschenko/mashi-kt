@@ -43,7 +43,6 @@ class ImageRepo : KoinComponent {
                 var data = imageDao.getImage(url)
                 if (data == null) {
                     data = ipfsApi.getImageSrc(url) ?: return@withContext null
-
                     val imageType = getImageType(data)
                     if (imageType != ImageType.UNKNOWN) {
                         imageDao.addImage(url, data)
@@ -58,6 +57,7 @@ class ImageRepo : KoinComponent {
                 }
                 Pair(name, data)
             } catch (e: Exception) {
+                print(e.message)
                 null
             }
         }

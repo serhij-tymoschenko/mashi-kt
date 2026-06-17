@@ -21,18 +21,19 @@ fun getMime(data: ByteArray): String {
 
 fun getImageType(data: ByteArray): ImageType {
     return try {
-        // Trim leading whitespace bytes
-        val leadingIdx =
-            data.indexOfFirst { it != ' '.code.toByte() && it != '\n'.code.toByte() && it != '\r'.code.toByte() }
-        if (leadingIdx != -1 && leadingIdx + 4 <= data.size) {
-            val prefix = String(data.sliceArray(leadingIdx until leadingIdx + 4), Charsets.UTF_8)
-            if (prefix.startsWith("<svg")) return ImageType.SVG
-        }
-
         val size = data.size
         if (size < 4) return ImageType.UNKNOWN
 
-        // Convert first 4 bytes to Hex string for easy matching
+        // 1. Robust SVG / XML Wrapper Checking
+        // Read up to the first 1024 bytes (or full size if smaller) to check for SVG keywords
+        val searchBufferSize = minOf(size, 1024)
+        val headerString = String(data.sliceArray(0 until searchBufferSize), Charsets.UTF_8)
+
+        if (headerString.contains("<svg", ignoreCase = true)) {
+            return ImageType.SVG
+        }
+
+        // 2. Convert first 4 bytes to Hex string for traditional magic number matching
         val hexMarker = data.take(4).joinToString("") { "%02X".format(it) }
 
         when {
