@@ -36,6 +36,8 @@ class AnimCombiner : KoinComponent {
                     height = GIF_HEIGHT
                 )
 
+                var startOffsetSec = 0.0
+
                 PlaywrightService.getBrowser().use { browser ->
                     // 1. Warm-up pass: load images + apply preparePage's padding
                     // correction OFF-CAMERA, then capture the corrected DOM.
@@ -60,10 +62,21 @@ class AnimCombiner : KoinComponent {
                     )
 
                     val page = browserCtx.newPage()
+
+                    // Playwright starts capturing video the instant this page exists,
+                    // before any content is painted — that gap shows up as solid-white
+                    // lead-in frames in the .webm. Measure exactly how long it takes to
+                    // get real pixels on screen, so we can trim precisely that span with
+                    // ffmpeg, instead of cutting a fixed/guessed number of frames.
+                    val recordingStartedAt = System.nanoTime()
                     page.setContent(correctedHtml)
                     page.waitForFunction(
                         "Array.from(document.images).every(img => img.complete)"
                     )
+                    // +1 frame of slack: the JS condition can resolve a tick before the
+                    // browser actually paints that state into the recorded track.
+                    startOffsetSec = (System.nanoTime() - recordingStartedAt) / 1_000_000_000.0 +
+                            (1.0 / PLAYBACK_FPS)
 
                     val durationMs = (maxT * 1000).toLong()
                     delay(durationMs.milliseconds)
@@ -74,7 +87,7 @@ class AnimCombiner : KoinComponent {
                 val videoFile = tempDir.toFile().listFiles { _, name -> name.endsWith(".webm") }?.firstOrNull()
                     ?: throw IllegalStateException("Playwright video was not recorded successfully.")
 
-                return@withContext makeGifFromVideo(videoFile.toPath(), tempDir, maxT)
+                return@withContext makeGifFromVideo(videoFile.toPath(), tempDir, maxT - startOffsetSec, startOffsetSec)
             } catch (e: Exception) {
                 System.err.println("Error in generateAnim: ${e.message}")
                 throw e
@@ -82,17 +95,21 @@ class AnimCombiner : KoinComponent {
         }
     }
 
-    private fun makeGifFromVideo(videoPath: Path, tempDir: Path, maxT: Double): Path {
+    private fun makeGifFromVideo(videoPath: Path, tempDir: Path, maxT: Double, startOffsetSec: Double): Path {
         val palettePath = tempDir.resolve("palette.png")
         val gifPath = tempDir.resolve("result.gif")
         val dimensions = "${GIF_WIDTH}x${GIF_HEIGHT}"
+        val seekArg = String.format("%.3f", startOffsetSec)
 
-        // Step 1: Generate palette starting from absolute 0
+        // Step 1: Generate palette starting AFTER the blank lead-in, not absolute 0,
+        // so the white frames don't pollute the color palette either.
         executeCmd(
             "ffmpeg",
             "-y",
             "-threads",
             "0",
+            "-ss",
+            seekArg,
             "-i",
             videoPath.absolutePathString(),
             "-vf",
@@ -100,12 +117,14 @@ class AnimCombiner : KoinComponent {
             palettePath.absolutePathString()
         )
 
-        // Step 2: Render final GIF starting exactly at the first frame
+        // Step 2: Render final GIF starting exactly at the first real (non-white) frame
         executeCmd(
             "ffmpeg",
             "-y",
             "-threads",
             "0",
+            "-ss",
+            seekArg,
             "-t",
             String.format("%.3f", maxT),
             "-i",
