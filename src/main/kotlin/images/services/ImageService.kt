@@ -1,11 +1,13 @@
 ﻿package images.services
 
+import com.mashiverse.configs.imageSemaphore
 import com.mashiverse.data.models.Mashup
 import com.mashiverse.data.remote.apis.MashitApi
 import com.mashiverse.data.repos.ImageRepo
 import data.models.DownloadType
 import data.models.mappers.toMashup
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -32,11 +34,13 @@ class ImageService : KoinComponent {
 
                 if (input == null) return@withContext null
 
-                return@withContext imageRepo.getImage(
-                    mashup = input,
-                    downloadType = downloadType,
-                    mintedName = mintedName
-                )
+                return@withContext imageSemaphore.withPermit {
+                    imageRepo.getImage(
+                        mashup = input,
+                        downloadType = downloadType,
+                        mintedName = mintedName
+                    )
+                }
 
             } catch (e: Exception) {
                 println("❌ Balancer Error: ${e.message}")

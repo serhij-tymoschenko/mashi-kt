@@ -38,8 +38,12 @@ class CompositeCombiner : KoinComponent {
                     page.setContent(htmlContent)
                     preparePage(page, getPngArgs())
 
+
                     // CRITICAL: Force Playwright to wait until all assets/images are fully loaded
                     page.waitForLoadState(LoadState.NETWORKIDLE)
+                    page.waitForFunction(
+                        "Array.from(document.images).every(img => img.complete)"
+                    )
 
                     val client = page.context().newCDPSession(page)
 
