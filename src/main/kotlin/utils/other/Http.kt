@@ -11,6 +11,8 @@ fun Application.configureHttp() {
 
         allowHeaders { true }
         allowCredentials = true
+        allowSameOrigin = true
+        allowNonSimpleContentTypes = true
 
         val prodSchemes = listOf("https")
         allowHost("mash-it.io", schemes = prodSchemes)

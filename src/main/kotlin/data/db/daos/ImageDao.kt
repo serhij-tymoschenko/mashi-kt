@@ -1,7 +1,6 @@
 ﻿package com.mashiverse.data.db.daos
 
 import com.mashiverse.data.db.PostgresManager
-import com.mashiverse.data.db.entities.Image
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.sql.Connection
