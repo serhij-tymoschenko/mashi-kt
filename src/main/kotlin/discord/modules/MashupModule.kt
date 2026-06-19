@@ -12,7 +12,8 @@ import dev.kord.core.behavior.interaction.response.respond
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.ReactionEmoji
 import dev.kord.core.entity.channel.TextChannel
-import dev.kord.core.event.interaction.GuildChatInputCommandInteractionCreateEvent
+import dev.kord.core.entity.interaction.GuildChatInputCommandInteraction
+import dev.kord.core.event.interaction.ChatInputCommandInteractionCreateEvent
 import dev.kord.core.on
 import dev.kord.rest.builder.interaction.string
 import dev.kord.rest.builder.message.embed
@@ -37,19 +38,24 @@ class MashupModule(private val kord: Kord) : KoinComponent {
     private fun registerCommands() {
         kord.launch {
             kord.createGlobalChatInputCommand("mashi", "Generates mashup") {
+                dmPermission = true
                 string("image", "Image type") {
                     choice("PNG", "PNG")
                     choice("GIF", "GIF")
                 }
             }
             kord.createGlobalChatInputCommand("delete_mashup", "Deletes mashup") {
+                dmPermission = true
                 string("msg_id", "Message id on right click") { required = true }
             }
         }
     }
 
     private fun listenToInteractions() {
-        kord.on<GuildChatInputCommandInteractionCreateEvent> {
+        // Generic event type fires for both guild AND DM interactions.
+        // The guild-specific event type only fires inside servers, which is
+        // why these commands previously failed in DMs.
+        kord.on<ChatInputCommandInteractionCreateEvent> {
             val command = interaction.command
             when (command.rootName) {
                 "mashi" -> handleMashi(this)
@@ -58,7 +64,7 @@ class MashupModule(private val kord: Kord) : KoinComponent {
         }
     }
 
-    private suspend fun handleMashi(event: GuildChatInputCommandInteractionCreateEvent) {
+    private suspend fun handleMashi(event: ChatInputCommandInteractionCreateEvent) {
         val interaction = event.interaction
         val imageOpt = interaction.command.options["image"]?.value?.toString() ?: "PNG"
 
@@ -99,6 +105,8 @@ class MashupModule(private val kord: Kord) : KoinComponent {
                 msg = interactionResponse.message
             }
         } catch (e: Exception) {
+            // Notifying a fixed log channel still works fine from a DM context,
+            // since this uses the bot's own channel lookup, not the user's guild.
             val channel = kord.getChannelOf<TextChannel>(Snowflake(TEST_CHANNEL_ID))
             channel?.createMessage("/mashi: ${e.message}")
             response.respond { content = "Something went wrong" }
@@ -113,7 +121,7 @@ class MashupModule(private val kord: Kord) : KoinComponent {
         }
     }
 
-    private suspend fun handleDeleteMashup(event: GuildChatInputCommandInteractionCreateEvent) {
+    private suspend fun handleDeleteMashup(event: ChatInputCommandInteractionCreateEvent) {
         val interaction = event.interaction
         val msgIdStr = interaction.command.options["msg_id"]!!.value.toString()
         val response = interaction.deferEphemeralResponse()
@@ -126,12 +134,21 @@ class MashupModule(private val kord: Kord) : KoinComponent {
             val metadataUser = message.interaction?.user
             val originalPosterId = metadataUser?.id
 
-            val member = interaction.user.asMember(interaction.guildId)
-            val permissions = member.getPermissions()
-            val isStaff = permissions.contains(Permission.Administrator) ||
-                    permissions.contains(Permission.ManageMessages) ||
-                    interaction.user.id == interaction.getGuild().ownerId
+            // guildId is null in a DM — only check guild staff permissions when one exists.
+            val isStaff = when (val i = interaction) {
+                is GuildChatInputCommandInteraction -> {
+                    val member = i.user.asMember(i.guildId)
+                    val permissions = member.getPermissions()
+                    permissions.contains(Permission.Administrator) ||
+                            permissions.contains(Permission.ManageMessages) ||
+                            i.user.id == i.getGuild()?.ownerId
+                }
+                else -> false
+            }
 
+            // In a DM, channel.getMessage already implicitly restricts this to
+            // messages the bot can see in that DM, so the "original poster" check
+            // alone is sufficient — there's no staff concept without a guild.
             if (originalPosterId == interaction.user.id || isStaff) {
                 message.delete()
                 response.respond { content = "Mashup was deleted" }

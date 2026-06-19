@@ -5,6 +5,7 @@ import com.mashiverse.data.db.daos.UserDao
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.interaction.response.respond
+import dev.kord.core.event.interaction.ChatInputCommandInteractionCreateEvent
 import dev.kord.core.event.interaction.GuildChatInputCommandInteractionCreateEvent
 import dev.kord.core.on
 import dev.kord.rest.builder.interaction.string
@@ -23,14 +24,17 @@ class WalletModule(private val kord: Kord) : KoinComponent {
     private fun registerCommands() {
         kord.launch {
             kord.createGlobalChatInputCommand( "connect_wallet", "Connect wallet") {
+                dmPermission = true
                 string("wallet", "Wallet") { required = true }
             }
-            kord.createGlobalChatInputCommand("disconnect_wallet", "Disconnect wallet")
+            kord.createGlobalChatInputCommand("disconnect_wallet", "Disconnect wallet") {
+                dmPermission = true
+            }
         }
     }
 
     private fun listenToInteractions() {
-        kord.on<GuildChatInputCommandInteractionCreateEvent> {
+        kord.on<ChatInputCommandInteractionCreateEvent> {
             when (interaction.command.rootName) {
                 "connect_wallet" -> handleConnectWallet(this)
                 "disconnect_wallet" -> handleDisconnectWallet(this)
@@ -38,7 +42,7 @@ class WalletModule(private val kord: Kord) : KoinComponent {
         }
     }
 
-    private suspend fun handleConnectWallet(event: GuildChatInputCommandInteractionCreateEvent) {
+    private suspend fun handleConnectWallet(event: ChatInputCommandInteractionCreateEvent) {
         val interaction = event.interaction
         val wallet = interaction.command.options["wallet"]!!.value.toString()
         val response = interaction.deferEphemeralResponse()
@@ -71,7 +75,7 @@ class WalletModule(private val kord: Kord) : KoinComponent {
         }
     }
 
-    private suspend fun handleDisconnectWallet(event: GuildChatInputCommandInteractionCreateEvent) {
+    private suspend fun handleDisconnectWallet(event: ChatInputCommandInteractionCreateEvent) {
         val interaction = event.interaction
         val response = interaction.deferEphemeralResponse()
 
