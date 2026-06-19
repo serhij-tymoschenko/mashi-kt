@@ -68,7 +68,7 @@ object NotificationService {
                         )
                         .build()
                 )
-                .setTopic("ios_users")
+                .setTopic("all_users")
                 .build()
 
             FirebaseMessaging.getInstance(iosApp).send(message)
@@ -77,5 +77,9 @@ object NotificationService {
             e.printStackTrace()
         }
     }
+}
+
+fun main(args: Array<String>) {
+    NotificationService.notifyIosUsers("TESt", "Test Notification")
 }
 
