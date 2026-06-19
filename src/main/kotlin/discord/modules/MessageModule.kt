@@ -20,7 +20,7 @@ fun generateAssetsLinks(assets: NotifyDto.AssetsDto): String {
         "right_accessory" to assets.rightAccessory,
         "background" to assets.background
     ).mapNotNull { (key, value) ->
-        if (value != null) {
+        if (!value.isNullOrEmpty()) {
             "[$key](${value.toHttpIpfsUrl()})"
         } else null
     }
