@@ -32,11 +32,11 @@ data class NotifyDto(
 
     @Serializable
     data class ListingDto(
-        val listingId: String,
-        val marketplace: String,
-        val priceMatic: String,
-        val maxSupply: Int,
-        val maxPerWallet: Int
+        val listingId: String = "",
+        val marketplace: String = "",
+        val priceMatic: Double = 0.0,
+        val maxSupply: Int = - 1,
+        val maxPerWallet: Int = -1
     )
 
 }
