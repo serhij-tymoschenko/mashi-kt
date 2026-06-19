@@ -80,6 +80,6 @@ object NotificationService {
 }
 
 fun main(args: Array<String>) {
-    NotificationService.notifyIosUsers("TESt", "Test Notification")
+    NotificationService.notifyIosUsers("TESt", "Test Notification", listingId = "L8Zq2CIplXfw3oPT1AXo")
 }
 

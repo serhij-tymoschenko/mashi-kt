@@ -33,6 +33,8 @@ WORKDIR /app
 
 # Copy the built distribution contents directly into /app (flattens structure)
 COPY --from=build /app/build/install/* /app/
+COPY mash-it-android-app-firebase-adminsdk-fbsvc-bb09c6be56.json /app/
+COPY mash-it-ios-firebase-adminsdk-fbsvc-149787883e.json /app/
 
 # Tell Playwright to look for the system browsers baked into this image
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
