@@ -9,7 +9,7 @@ fun Application.configureHttp() {
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
 
-        allowHeadersPrefixed("")
+        allowHeaders { true }
         allowCredentials = true
 
         val prodSchemes = listOf("https")
