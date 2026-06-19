@@ -18,6 +18,7 @@ import dev.kord.core.event.message.ReactionRemoveEvent
 import dev.kord.core.on
 import dev.kord.gateway.PrivilegedIntent
 import dev.kord.rest.builder.message.allowedMentions
+import dev.kord.rest.builder.message.embed
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -101,16 +102,29 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
 
     suspend fun notify(data: NotifyDto, isRelease: Boolean = true) {
         try {
-            val embedBuilder = getNotifyEmbed(data, isRelease)
             val channelId = Snowflake(if (isRelease) RELEASES_CHANNEL_ID else APPROVALS_CHANNEL_ID)
             val channel = kord.getChannelOf<TextChannel>(channelId) ?: return
 
             val roleId = Snowflake(if (isRelease) RELEASES_ROLE_ID else APPROVALS_ROLE_ID)
 
+
+
             channel.createMessage {
                 content = "<@&$roleId>"
-                embeds?.add(embedBuilder)
-                allowedMentions { roles.add(roleId) }
+
+                embed {
+                    val builtEmbed = getNotifyEmbed(data, isRelease)
+                    title = builtEmbed.title
+                    url = builtEmbed.url
+                    color = builtEmbed.color
+                    image = builtEmbed.image
+                    footer = builtEmbed.footer
+                    fields = builtEmbed.fields
+                }
+
+                allowedMentions {
+                    roles.add(roleId)
+                }
             }
 
             if (isRelease && data.listing != null) {
@@ -129,9 +143,8 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
                 } catch (e: Exception) {
                     println(e.message)
                 }
-
-                //TODO: fetchAndCacheAsync(docId)
             }
+                //TODO: fetchAndCacheAsync(docId)
 
         } catch (e: Exception) {
             println(e)

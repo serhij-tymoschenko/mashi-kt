@@ -32,16 +32,11 @@ fun generateAssetsLinks(assets: NotifyDto.AssetsDto): String {
 }
 
 fun getNotifyEmbed(data: NotifyDto, isRelease: Boolean): EmbedBuilder {
+    // 1. Calculate variables outside the builder for cleaner DSL reading
     val urlStr = if (isRelease && data.listing != null) {
         "https://mash-it.io/mashers?listing=${data.listing.listingId}"
     } else {
         "https://mash-it.io/mashers"
-    }
-
-    val embed = EmbedBuilder().apply {
-        title = data.title
-        url = urlStr
-        color = Color(0x00FF00) // Green
     }
 
     val details = if (isRelease && data.listing != null) {
@@ -55,23 +50,28 @@ fun getNotifyEmbed(data: NotifyDto, isRelease: Boolean): EmbedBuilder {
         "Artist: ${data.artistName}"
     }
 
-    embed.field {
-        name = "Details"
-        value = details
-        inline = false
+    // 2. Build the embed cleanly using Kord's DSL
+    return EmbedBuilder().apply {
+        title = data.title
+        url = urlStr
+        color = Color(0x00FF00) // Green
+        image = data.assets.composite.toHttpIpfsUrl()
+
+        // Kord DSL field addition
+        field {
+            name = "Details"
+            value = details
+            inline = false
+        }
+
+        field {
+            name = "Assets:"
+            value = generateAssetsLinks(data.assets)
+            inline = false
+        }
+
+        footer {
+            text = "© 2026 mash-it x ${data.artistName}"
+        }
     }
-
-    embed.field {
-        name = "Assets:"
-        value = generateAssetsLinks(data.assets)
-        inline = false
-    }
-
-    embed.image = data.assets.composite.toHttpIpfsUrl()
-
-    embed.footer {
-        text = "© 2026 mash-it x ${data.artistName}"
-    }
-
-    return embed
 }
