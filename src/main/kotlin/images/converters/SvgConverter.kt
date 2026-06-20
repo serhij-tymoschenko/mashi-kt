@@ -23,12 +23,61 @@ object SvgProcessor {
         nu.pattern.OpenCV.loadLocally()
     }
 
+    // Helper to extract properties checking attributes, inline styles, and CSS classes
+    private fun extractProperty(element: Element, attrName: String, cssMap: Map<String, String>): String {
+        // 1. Check direct attributes
+        val directAttr = element.getAttribute(attrName)
+        if (directAttr.isNotEmpty()) return directAttr
+
+        // 2. Check inline styles
+        val styleAttr = element.getAttribute("style")
+        if (styleAttr.isNotEmpty()) {
+            val regex = Regex("$attrName\\s*:\\s*([^;]+)")
+            val match = regex.find(styleAttr)
+            if (match != null) return match.groupValues[1].trim()
+        }
+
+        // 3. Check CSS classes
+        val classAttr = element.getAttribute("class")
+        if (classAttr.isNotEmpty()) {
+            val classes = classAttr.split("\\s+".toRegex())
+            for (className in classes) {
+                val rules = cssMap[className]
+                if (rules != null) {
+                    val regex = Regex("$attrName\\s*:\\s*([^;]+)")
+                    val match = regex.find(rules)
+                    if (match != null) return match.groupValues[1].trim()
+                }
+            }
+        }
+        return ""
+    }
+
     fun processSvg(inputBytes: ByteArray): ByteArray {
-        // Parse SVG String into XML DOM Document
         val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
         val builder = factory.newDocumentBuilder()
         val doc = builder.parse(ByteArrayInputStream(inputBytes))
         val root = doc.documentElement
+
+        // --- 0. Parse CSS <style> blocks ---
+        val cssMap = mutableMapOf<String, String>()
+        val styleNodes = doc.getElementsByTagName("style")
+        for (i in 0 until styleNodes.length) {
+            val content = styleNodes.item(i).textContent
+            // Remove comments
+            val cleanContent = content.replace(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), "")
+            // Match CSS blocks: selector { rules }
+            val blockRegex = Regex("([^\\{]+)\\{([^}]+)\\}")
+            blockRegex.findAll(cleanContent).forEach { match ->
+                val selectors = match.groupValues[1]
+                val rules = match.groupValues[2]
+                // Match class names in the selector (e.g., .st0, .st1)
+                val classRegex = Regex("\\.([a-zA-Z0-9_\\-]+)")
+                classRegex.findAll(selectors).forEach { clsMatch ->
+                    cssMap[clsMatch.groupValues[1]] = rules
+                }
+            }
+        }
 
         // --- 1. Map every Mask ID to its calculated path data ---
         val maskDefinitions = mutableMapOf<String, String>()
@@ -60,8 +109,11 @@ object SvgProcessor {
 
                 val maskBits = Mat()
                 if (img.channels() == 4) {
-                    // Extract Alpha Channel
-                    Core.extractChannel(img, maskBits, 3)
+                    val gray = Mat()
+                    val alpha = Mat()
+                    Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGRA2GRAY)
+                    Core.extractChannel(img, alpha, 3)
+                    Core.min(gray, alpha, maskBits)
                 } else {
                     Imgproc.cvtColor(img, maskBits, Imgproc.COLOR_BGR2GRAY)
                 }
@@ -108,17 +160,32 @@ object SvgProcessor {
             val maskAttr = child.getAttribute("mask")
             val pathD = maskDefinitions[maskAttr] ?: continue
 
-            var fillColor = child.getAttribute("fill")
-            var opacity = child.getAttribute("opacity").ifEmpty { child.getAttribute("fill-opacity") }
+            var fillColor = extractProperty(child, "fill", cssMap)
+            var opacity = extractProperty(child, "opacity", cssMap).ifEmpty { extractProperty(child, "fill-opacity", cssMap) }
 
+            // Check parents if color is missing
+            if (fillColor.isEmpty() || fillColor == "none") {
+                var parent = child.parentNode
+                while (parent != null && parent is Element) {
+                    val pFill = extractProperty(parent, "fill", cssMap)
+                    if (pFill.isNotEmpty() && pFill != "none") {
+                        fillColor = pFill
+                        break
+                    }
+                    parent = parent.parentNode
+                }
+            }
+
+            // Check children if color is STILL missing (wrapper group scenario)
             if (fillColor.isEmpty() || fillColor == "none") {
                 val innerElements = child.getElementsByTagName("*")
                 for (k in 0 until innerElements.length) {
                     val inner = innerElements.item(k) as Element
-                    if (inner.hasAttribute("fill")) {
-                        fillColor = inner.getAttribute("fill")
+                    val innerFill = extractProperty(inner, "fill", cssMap)
+                    if (innerFill.isNotEmpty() && innerFill != "none") {
+                        fillColor = innerFill
                         if (opacity.isEmpty()) {
-                            opacity = inner.getAttribute("opacity").ifEmpty { inner.getAttribute("fill-opacity") }
+                            opacity = extractProperty(inner, "opacity", cssMap).ifEmpty { extractProperty(inner, "fill-opacity", cssMap) }
                         }
                         break
                     }
@@ -165,7 +232,6 @@ object SvgProcessor {
                     referencedNode.setAttribute("transform", "translate($ux, $uy) $existTr".trim())
                 }
 
-                // Inherit attributes from <use> node
                 val useAttrs = useElem.attributes
                 for (k in 0 until useAttrs.length) {
                     val attr = useAttrs.item(k)
@@ -197,13 +263,12 @@ object SvgProcessor {
             }
         }
 
-        // Remove clipPathUnits attributes
         val clipPaths = root.getElementsByTagNameNS("http://www.w3.org/2000/svg", "clipPath")
         for (i in 0 until clipPaths.length) {
             (clipPaths.item(i) as Element).removeAttribute("clipPathUnits")
         }
 
-        // --- 5. Finalize & Transform to pretty Byte Array ---
+        // --- 5. Finalize & Transform ---
         val transformer = TransformerFactory.newInstance().newTransformer().apply {
             setOutputProperty(OutputKeys.INDENT, "yes")
             setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
