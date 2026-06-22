@@ -25,11 +25,9 @@ object SvgProcessor {
 
     // Helper to extract properties checking attributes, inline styles, and CSS classes
     private fun extractProperty(element: Element, attrName: String, cssMap: Map<String, String>): String {
-        // 1. Check direct attributes
         val directAttr = element.getAttribute(attrName)
         if (directAttr.isNotEmpty()) return directAttr
 
-        // 2. Check inline styles
         val styleAttr = element.getAttribute("style")
         if (styleAttr.isNotEmpty()) {
             val regex = Regex("$attrName\\s*:\\s*([^;]+)")
@@ -37,7 +35,6 @@ object SvgProcessor {
             if (match != null) return match.groupValues[1].trim()
         }
 
-        // 3. Check CSS classes
         val classAttr = element.getAttribute("class")
         if (classAttr.isNotEmpty()) {
             val classes = classAttr.split("\\s+".toRegex())
@@ -64,14 +61,11 @@ object SvgProcessor {
         val styleNodes = doc.getElementsByTagName("style")
         for (i in 0 until styleNodes.length) {
             val content = styleNodes.item(i).textContent
-            // Remove comments
             val cleanContent = content.replace(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), "")
-            // Match CSS blocks: selector { rules }
             val blockRegex = Regex("([^\\{]+)\\{([^}]+)\\}")
             blockRegex.findAll(cleanContent).forEach { match ->
                 val selectors = match.groupValues[1]
                 val rules = match.groupValues[2]
-                // Match class names in the selector (e.g., .st0, .st1)
                 val classRegex = Regex("\\.([a-zA-Z0-9_\\-]+)")
                 classRegex.findAll(selectors).forEach { clsMatch ->
                     cssMap[clsMatch.groupValues[1]] = rules
@@ -108,28 +102,28 @@ object SvgProcessor {
                 if (img == null || img.empty()) continue
 
                 val maskBits = Mat()
+                // Match Python logic: Extract ONLY the alpha channel if 4 channels exist
                 if (img.channels() == 4) {
-                    val gray = Mat()
-                    val alpha = Mat()
-                    Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGRA2GRAY)
-                    Core.extractChannel(img, alpha, 3)
-                    Core.min(gray, alpha, maskBits)
+                    Core.extractChannel(img, maskBits, 3)
                 } else {
                     Imgproc.cvtColor(img, maskBits, Imgproc.COLOR_BGR2GRAY)
                 }
 
+                // Match Python logic: Raise threshold to 127.0 to filter out fringe gaps cleanly
                 val thresh = Mat()
                 Imgproc.threshold(maskBits, thresh, 127.0, 255.0, Imgproc.THRESH_BINARY)
 
                 val contours = mutableListOf<MatOfPoint>()
                 val hierarchy = Mat()
+
+                // Match Python logic: Use RETR_EXTERNAL to get the outer shell boundary
                 Imgproc.findContours(thresh, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE)
 
                 val imgX = imgElem.getAttribute("x").toDoubleOrNull() ?: 0.0
                 val imgY = imgElem.getAttribute("y").toDoubleOrNull() ?: 0.0
 
                 for (contour in contours) {
-                    if (Imgproc.contourArea(contour) < 10) continue
+                    if (Imgproc.contourArea(contour) < 10) continue // Match Python's threshold < 10
                     val points = contour.toArray()
                     if (points.isEmpty()) continue
 
@@ -139,6 +133,12 @@ object SvgProcessor {
                     }
                     combinedPathD += "Z "
                 }
+
+                // Native memory lifecycle management
+                maskBits.release()
+                thresh.release()
+                hierarchy.release()
+                img.release()
             }
 
             if (combinedPathD.isNotBlank()) {
@@ -146,7 +146,7 @@ object SvgProcessor {
             }
         }
 
-        // --- 2. Replace masked elements with vector paths ---
+        // --- 2. Convert masks into clipPaths instead of destructive replacement ---
         val allNodes = root.getElementsByTagName("*")
         val nodesToProcessMasks = mutableListOf<Element>()
         for (i in 0 until allNodes.length) {
@@ -156,51 +156,32 @@ object SvgProcessor {
             }
         }
 
+        var defsElement = root.getElementsByTagNameNS("http://www.w3.org/2000/svg", "defs").item(0) as? Element
+        if (defsElement == null) {
+            defsElement = doc.createElementNS("http://www.w3.org/2000/svg", "defs")
+            root.insertBefore(defsElement, root.firstChild)
+        }
+
         for (child in nodesToProcessMasks) {
             val maskAttr = child.getAttribute("mask")
             val pathD = maskDefinitions[maskAttr] ?: continue
 
-            var fillColor = extractProperty(child, "fill", cssMap)
-            var opacity = extractProperty(child, "opacity", cssMap).ifEmpty { extractProperty(child, "fill-opacity", cssMap) }
+            child.removeAttribute("mask")
 
-            // Check parents if color is missing
-            if (fillColor.isEmpty() || fillColor == "none") {
-                var parent = child.parentNode
-                while (parent != null && parent is Element) {
-                    val pFill = extractProperty(parent, "fill", cssMap)
-                    if (pFill.isNotEmpty() && pFill != "none") {
-                        fillColor = pFill
-                        break
-                    }
-                    parent = parent.parentNode
-                }
+            val uniqueClipId = "vector-clip-${UUID.randomUUID().toString().take(8)}"
+
+            val clipPathNode = doc.createElementNS("http://www.w3.org/2000/svg", "clipPath").apply {
+                setAttribute("id", uniqueClipId)
             }
 
-            // Check children if color is STILL missing (wrapper group scenario)
-            if (fillColor.isEmpty() || fillColor == "none") {
-                val innerElements = child.getElementsByTagName("*")
-                for (k in 0 until innerElements.length) {
-                    val inner = innerElements.item(k) as Element
-                    val innerFill = extractProperty(inner, "fill", cssMap)
-                    if (innerFill.isNotEmpty() && innerFill != "none") {
-                        fillColor = innerFill
-                        if (opacity.isEmpty()) {
-                            opacity = extractProperty(inner, "opacity", cssMap).ifEmpty { extractProperty(inner, "fill-opacity", cssMap) }
-                        }
-                        break
-                    }
-                }
-            }
-
-            val newPath = doc.createElementNS("http://www.w3.org/2000/svg", "path").apply {
+            val pathNode = doc.createElementNS("http://www.w3.org/2000/svg", "path").apply {
                 setAttribute("d", pathD)
-                setAttribute("fill", fillColor.ifEmpty { "#000000" })
                 setAttribute("fill-rule", "evenodd")
-                if (opacity.isNotEmpty()) setAttribute("opacity", opacity)
-                if (child.hasAttribute("transform")) setAttribute("transform", child.getAttribute("transform"))
             }
+            clipPathNode.appendChild(pathNode)
+            defsElement.appendChild(clipPathNode)
 
-            child.parentNode.replaceChild(newPath, child)
+            child.setAttribute("clip-path", "url(#$uniqueClipId)")
         }
 
         // --- 3. Replace <use> tags with actual elements ---
