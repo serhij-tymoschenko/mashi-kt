@@ -6,10 +6,10 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class MashupDto(
-    val wallet: String,
-    val id: String,
-    val timestamp: Long,
+    val wallet: String? = null,
+    val id: String? = null,
+    val timestamp: Long? = null,
     val colors: Colors,
-    val count: Int,
+    val count: Int? = null,
     val assets: List<Asset>
 )
