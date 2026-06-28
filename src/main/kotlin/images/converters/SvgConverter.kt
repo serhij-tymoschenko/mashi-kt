@@ -51,7 +51,15 @@ object SvgProcessor {
     }
 
     fun processSvg(inputBytes: ByteArray): ByteArray {
-        val factory = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = true
+
+            // Disable external DTDs to prevent W3C rate-limiting (HTTP 429)
+            setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+            // Optional additional security hardening against XML External Entity (XXE) injections:
+            setFeature("http://xml.org/sax/features/external-general-entities", false)
+            setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+        }
         val builder = factory.newDocumentBuilder()
         val doc = builder.parse(ByteArrayInputStream(inputBytes))
         val root = doc.documentElement
