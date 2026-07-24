@@ -19,7 +19,8 @@ class ImageService : KoinComponent {
         wallet: String? = null,
         mashup: Mashup? = null,
         downloadType: DownloadType,
-        mintedName: String? = null
+        mintedName: String? = null,
+        greyscale: Boolean = false,
     ): ByteArray? {
         return withContext(Dispatchers.IO) {
             try {
@@ -38,7 +39,8 @@ class ImageService : KoinComponent {
                     imageRepo.getImage(
                         mashup = input,
                         downloadType = downloadType,
-                        mintedName = mintedName
+                        mintedName = mintedName,
+                        greyscale = greyscale
                     )
                 }
 

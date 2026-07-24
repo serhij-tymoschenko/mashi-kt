@@ -61,7 +61,10 @@ class ImageRepo : KoinComponent {
     }
 
     suspend fun getImage(
-        mashup: Mashup, downloadType: DownloadType = DownloadType.PNG, mintedName: String? = null
+        mashup: Mashup,
+        downloadType: DownloadType = DownloadType.PNG,
+        mintedName: String? = null,
+        greyscale: Boolean = false
     ): ByteArray? {
         return withContext(Dispatchers.IO) {
             val tempDir = Paths.get(System.getProperty("java.io.tmpdir")).resolve("mashi-temp")
@@ -100,10 +103,17 @@ class ImageRepo : KoinComponent {
                 }
 
                 val imagePath: Path = if (downloadType == DownloadType.PNG) {
-                    compositeCombiner.generateComposite(uniqueDir)
+                    compositeCombiner.generateComposite(
+                        uniqueDir,
+                        greyscale = greyscale
+                    )
                 } else {
                     val maxT = getMaxDuration(traits)
-                    animCombiner.generateAnim(uniqueDir, maxT)
+                    animCombiner.generateAnim(
+                        uniqueDir,
+                        maxT,
+                        greyscale = greyscale
+                    )
                 }
 
                 return@withContext readFile(imagePath)

@@ -28,11 +28,20 @@ fun prepareHtml(
     urls: List<String>,
     width: Int,
     height: Int,
+    greyscale: Boolean = false,
 ): String {
+    val styleFilters = mutableListOf<String>()
+
+    if (greyscale) {
+        styleFilters.add("filter: grayscale(100%);")
+    }
+
+    val extraStyles = styleFilters.joinToString(" ")
+
     val imageTags = urls.mapIndexed { i, url ->
         """
             <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:$i;">
-                <img src="$url" style="width:100%; height:100%; object-fit:contain;" />
+                <img src="$url" style="width:100%; height:100%; object-fit:contain; $extraStyles" />
             </div>
             """.trimIndent()
     }.joinToString("\n")

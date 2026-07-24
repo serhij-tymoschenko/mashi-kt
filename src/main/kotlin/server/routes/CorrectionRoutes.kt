@@ -72,5 +72,34 @@ fun Application.correctionRoutes() {
                 call.respond(HttpStatusCode.InternalServerError)
             }
         }
+
+        get("/api/thumb/{image_id}") {
+            val imageId = call.parameters["image_id"]
+                ?: return@get call.respond(HttpStatusCode.BadRequest)
+
+            val url = "https://ipfs.io/ipfs/$imageId"
+
+            try {
+                // Check cache
+                var src: ByteArray? = imageDao.getSvgImage(url)
+
+                if (src == null) {
+                    val svgBytes = ipfsApi.getImageSrc(url)
+
+                    src = SvgProcessor.processSvg(svgBytes!!)
+
+                    if (getImageType(src) == ImageType.SVG) {
+                        imageDao.addSvgImage(url, src)
+                    }
+                }
+
+                val pngBytes = SvgProcessor.convertSvgToThumb(src)
+                call.respondBytes(pngBytes, ContentType.Image.PNG)
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                call.respond(HttpStatusCode.InternalServerError)
+            }
+        }
     }
 }

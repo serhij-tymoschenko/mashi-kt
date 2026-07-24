@@ -21,7 +21,11 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class AnimCombiner : KoinComponent {
 
-    suspend fun generateAnim(tempDir: Path, t: Double): Path {
+    suspend fun generateAnim(
+        tempDir: Path,
+        t: Double,
+        greyscale: Boolean = false
+    ): Path {
         return withContext(Dispatchers.IO) {
             try {
                 var maxT = t
@@ -33,7 +37,8 @@ class AnimCombiner : KoinComponent {
                 val htmlContent = prepareHtml(
                     urls = imageUrls,
                     width = GIF_WIDTH,
-                    height = GIF_HEIGHT
+                    height = GIF_HEIGHT,
+                    greyscale = greyscale
                 )
 
                 var startOffsetSec = 0.0

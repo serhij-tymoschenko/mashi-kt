@@ -84,4 +84,8 @@ dependencies {
     implementation("com.twelvemonkeys.imageio:imageio-core:3.12.0")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.12.0")
     implementation("com.twelvemonkeys.imageio:imageio-metadata:3.12.0")
+
+    // Batik
+    implementation("org.apache.xmlgraphics:batik-transcoder:1.17")
+    implementation("org.apache.xmlgraphics:batik-codec:1.17")
 }

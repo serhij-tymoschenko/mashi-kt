@@ -14,7 +14,10 @@ import org.koin.core.component.KoinComponent
 import java.nio.file.Path
 
 class CompositeCombiner : KoinComponent {
-    fun generateComposite(tempDir: Path): Path {
+    fun generateComposite(
+        tempDir: Path,
+        greyscale: Boolean = false
+    ): Path {
         val browser = PlaywrightService.getBrowser()
         val frameName = String.format("frame_%03d.png", 0)
         val framePath = tempDir.resolve(frameName)
@@ -24,7 +27,8 @@ class CompositeCombiner : KoinComponent {
             val htmlContent = prepareHtml(
                 urls = imageUrls,
                 width = PNG_WIDTH,
-                height = PNG_HEIGHT
+                height = PNG_HEIGHT,
+                greyscale = greyscale
             )
 
             // Using .use guarantees clean resource teardown automatically

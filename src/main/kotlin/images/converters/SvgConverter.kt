@@ -1,5 +1,8 @@
 ﻿package com.mashiverse.images.converters
 
+import org.apache.batik.transcoder.TranscoderInput
+import org.apache.batik.transcoder.TranscoderOutput
+import org.apache.batik.transcoder.image.PNGTranscoder
 import org.opencv.core.Core
 import org.opencv.core.Mat
 import org.opencv.core.MatOfByte
@@ -21,6 +24,71 @@ object SvgProcessor {
     init {
         // Initialize OpenCV binaries automatically for JVM
         nu.pattern.OpenCV.loadLocally()
+    }
+
+    fun convertSvgToThumb(svgBytes: ByteArray): ByteArray {
+        val svgString = svgBytes.decodeToString()
+        val patchedSvg = prepareSvgForBatik(svgString)
+
+        // 1. Parse the native resolution out of the viewBox or width/height attributes
+        val dimensions = extractSvgDimensions(patchedSvg)
+
+        ByteArrayInputStream(patchedSvg.toByteArray(Charsets.UTF_8)).use { inputStream ->
+            ByteArrayOutputStream().use { outputStream ->
+                val input = TranscoderInput(inputStream)
+                val output = TranscoderOutput(outputStream)
+
+                val transcoder = PNGTranscoder()
+
+                // 2. Explicitly force the PNG to match the exact SVG dimensions
+                if (dimensions != null) {
+                    transcoder.addTranscodingHint(PNGTranscoder.KEY_WIDTH, dimensions.first)
+                    transcoder.addTranscodingHint(PNGTranscoder.KEY_HEIGHT, dimensions.second)
+                }
+
+                transcoder.transcode(input, output)
+                return outputStream.toByteArray()
+            }
+        }
+    }
+
+    private fun prepareSvgForBatik(svg: String): String {
+        var processed = svg
+        if (!processed.contains("xmlns:xlink")) {
+            processed = processed.replace("<svg", "<svg xmlns:xlink=\"http://www.w3.org/1999/xlink\"")
+        }
+        processed = processed.replace(Regex("""<image([^>]*)\shref="""), "<image$1 xlink:href=")
+        return processed
+    }
+
+    /**
+     * Extracts width and height from the SVG root tag, prioritizing viewBox.
+     */
+    private fun extractSvgDimensions(svg: String): Pair<Float, Float>? {
+        try {
+            // 1. Try checking the viewBox attribute first: viewBox="0 0 width height"
+            val viewBoxRegex = Regex("""<svg[^>]*viewBox=["']\s*([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)["']""")
+            val matchViewBox = viewBoxRegex.find(svg)
+            if (matchViewBox != null) {
+                val w = matchViewBox.groupValues[3].toFloatOrNull()
+                val h = matchViewBox.groupValues[4].toFloatOrNull()
+                if (w != null && h != null) return Pair(w, h)
+            }
+
+            // 2. Fallback: Parse explicit width and height attributes
+            val widthRegex = Regex("""<svg[^>]*\bwidth=["']([0-9.]+)(px)?["']""")
+            val heightRegex = Regex("""<svg[^>]*\bheight=["']([0-9.]+)(px)?["']""")
+
+            val wMatch = widthRegex.find(svg)?.groupValues?.get(1)?.toFloatOrNull()
+            val hMatch = heightRegex.find(svg)?.groupValues?.get(1)?.toFloatOrNull()
+
+            if (wMatch != null && hMatch != null) {
+                return Pair(wMatch, hMatch)
+            }
+        } catch (e: Exception) {
+            // Fallback gracefully to Batik defaults if regex parsing misses a edge case
+        }
+        return null
     }
 
     // Helper to extract properties checking attributes, inline styles, and CSS classes

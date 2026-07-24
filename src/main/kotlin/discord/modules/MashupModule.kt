@@ -43,6 +43,10 @@ class MashupModule(private val kord: Kord) : KoinComponent {
                     choice("PNG", "PNG")
                     choice("GIF", "GIF")
                 }
+                string("effect", "Image effect") {
+                    choice("Base", "1")
+                    choice("Greyscale", "2")
+                }
             }
             kord.createGlobalChatInputCommand("delete_mashup", "Deletes mashup") {
                 dmPermission = true
@@ -67,6 +71,13 @@ class MashupModule(private val kord: Kord) : KoinComponent {
     private suspend fun handleMashi(event: ChatInputCommandInteractionCreateEvent) {
         val interaction = event.interaction
         val imageOpt = interaction.command.options["image"]?.value?.toString() ?: "PNG"
+        val effectOpt = interaction.command.options["effect"]?.value?.toString() ?: "1"
+
+        val greyscale = when (effectOpt) {
+            "1" -> false
+            "2" -> true
+            else -> false
+        }
 
         var msg: Message? = null
         val userId = interaction.user.id.value.toLong()
@@ -85,7 +96,7 @@ class MashupModule(private val kord: Kord) : KoinComponent {
             val downloadType = DownloadType.valueOf(imageOpt)
             val ext = if (downloadType == DownloadType.PNG) ".png" else ".gif"
 
-            val data = imageService.requestComposite(wallet, downloadType = downloadType)
+            val data = imageService.requestComposite(wallet, downloadType = downloadType, greyscale = greyscale)
             if (data != null) {
                 val filename = "composite$ext"
                 val inputStream = ByteArrayInputStream(data)
