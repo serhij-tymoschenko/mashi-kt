@@ -93,8 +93,8 @@ class CompositeCombiner : KoinComponent {
         executeCmd(
             "magick",
             inputPng.absolutePathString(),
-            "-scale", "20%",
-            "-scale", "500%",
+            "-scale", "10%",
+            "-scale", "1000%",
             pixelatedPngPath.absolutePathString()
         )
 
