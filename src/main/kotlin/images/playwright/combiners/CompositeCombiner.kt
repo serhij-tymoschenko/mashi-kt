@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import com.mashiverse.configs.PNG_HEIGHT
 import com.mashiverse.configs.PNG_WIDTH
 import com.mashiverse.images.playwright.PlaywrightService
+import com.mashiverse.utils.helpers.executeCmd
 import com.mashiverse.utils.helpers.readImageFiles
 import com.microsoft.playwright.Browser
 import com.microsoft.playwright.Page
@@ -12,11 +13,13 @@ import com.microsoft.playwright.options.ScreenshotType
 import com.microsoft.playwright.options.ViewportSize
 import org.koin.core.component.KoinComponent
 import java.nio.file.Path
+import kotlin.io.path.absolutePathString
 
 class CompositeCombiner : KoinComponent {
     fun generateComposite(
         tempDir: Path,
-        greyscale: Boolean = false
+        greyscale: Boolean = false,
+        pixelate: Boolean = false
     ): Path {
         val browser = PlaywrightService.getBrowser()
         val frameName = String.format("frame_%03d.png", 0)
@@ -73,10 +76,28 @@ class CompositeCombiner : KoinComponent {
                 }
             }
 
+            if (pixelate) {
+                return pixelatePng(framePath, tempDir)
+            }
+
             return framePath
         } catch (e: Exception) {
             System.err.println("Error in generateComposite: ${e.message}") // Fixed log message name
             throw e
         }
+    }
+
+    private fun pixelatePng(inputPng: Path, tempDir: Path): Path {
+        val pixelatedPngPath = tempDir.resolve("frame_000_pixelated.png")
+
+        executeCmd(
+            "magick",
+            inputPng.absolutePathString(),
+            "-scale", "20%",
+            "-scale", "500%",
+            pixelatedPngPath.absolutePathString()
+        )
+
+        return pixelatedPngPath
     }
 }

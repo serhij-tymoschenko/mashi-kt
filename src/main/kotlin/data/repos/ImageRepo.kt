@@ -64,7 +64,8 @@ class ImageRepo : KoinComponent {
         mashup: Mashup,
         downloadType: DownloadType = DownloadType.PNG,
         mintedName: String? = null,
-        greyscale: Boolean = false
+        greyscale: Boolean = false,
+        pixelate: Boolean = false
     ): ByteArray? {
         return withContext(Dispatchers.IO) {
             val tempDir = Paths.get(System.getProperty("java.io.tmpdir")).resolve("mashi-temp")
@@ -105,14 +106,16 @@ class ImageRepo : KoinComponent {
                 val imagePath: Path = if (downloadType == DownloadType.PNG) {
                     compositeCombiner.generateComposite(
                         uniqueDir,
-                        greyscale = greyscale
+                        greyscale = greyscale,
+                        pixelate = pixelate
                     )
                 } else {
                     val maxT = getMaxDuration(traits)
                     animCombiner.generateAnim(
                         uniqueDir,
                         maxT,
-                        greyscale = greyscale
+                        greyscale = greyscale,
+                        pixelate = pixelate
                     )
                 }
 

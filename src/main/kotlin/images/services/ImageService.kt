@@ -21,6 +21,7 @@ class ImageService : KoinComponent {
         downloadType: DownloadType,
         mintedName: String? = null,
         greyscale: Boolean = false,
+        pixelate: Boolean = false
     ): ByteArray? {
         return withContext(Dispatchers.IO) {
             try {
@@ -40,7 +41,8 @@ class ImageService : KoinComponent {
                         mashup = input,
                         downloadType = downloadType,
                         mintedName = mintedName,
-                        greyscale = greyscale
+                        greyscale = greyscale,
+                        pixelate = pixelate
                     )
                 }
 

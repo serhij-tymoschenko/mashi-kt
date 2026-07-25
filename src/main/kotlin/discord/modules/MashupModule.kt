@@ -44,8 +44,10 @@ class MashupModule(private val kord: Kord) : KoinComponent {
                     choice("GIF", "GIF")
                 }
                 string("effect", "Image effect") {
-                    choice("Base", "1")
-                    choice("Greyscale", "2")
+                    choice("base", "base")
+                    choice("greyscale", "greyscale")
+                    choice("pixelate", "pixelate")
+                    choice("both", "both")
                 }
             }
             kord.createGlobalChatInputCommand("delete_mashup", "Deletes mashup") {
@@ -73,10 +75,11 @@ class MashupModule(private val kord: Kord) : KoinComponent {
         val imageOpt = interaction.command.options["image"]?.value?.toString() ?: "PNG"
         val effectOpt = interaction.command.options["effect"]?.value?.toString() ?: "1"
 
-        val greyscale = when (effectOpt) {
-            "1" -> false
-            "2" -> true
-            else -> false
+        val (greyscale, pixelate) = when (effectOpt) {
+            "greyscale" -> true to false
+            "pixelate" -> false to true
+            "both" -> true to true
+            else -> false to false
         }
 
         var msg: Message? = null
@@ -96,7 +99,7 @@ class MashupModule(private val kord: Kord) : KoinComponent {
             val downloadType = DownloadType.valueOf(imageOpt)
             val ext = if (downloadType == DownloadType.PNG) ".png" else ".gif"
 
-            val data = imageService.requestComposite(wallet, downloadType = downloadType, greyscale = greyscale)
+            val data = imageService.requestComposite(wallet, downloadType = downloadType, greyscale = greyscale, pixelate = pixelate)
             if (data != null) {
                 val filename = "composite$ext"
                 val inputStream = ByteArrayInputStream(data)
@@ -107,7 +110,7 @@ class MashupModule(private val kord: Kord) : KoinComponent {
                 val interactionResponse = response.respond {
                     addFile(filename, channelProvider)
                     embed {
-                        title = "${interaction.user.username}'s mashup"
+                        title = "${interaction.user.globalName}'s mashup"
                         color = randomColor
                         image = "attachment://$filename"
                         footer { text = "© 2026 mash-it" }

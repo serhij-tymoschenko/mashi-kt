@@ -20,14 +20,16 @@ RUN ./gradlew installDist --no-daemon
 
 # ==========================================
 # Stage 2: Create the runtime image
-# ==========================================
 FROM mcr.microsoft.com/playwright/java:v1.59.0-noble AS runtime
 
-# Install native dependencies required for OpenCV/OpenPNP AND ffmpeg for frame processing
 RUN apt-get update && apt-get install -y \
     libopencv-dev \
     ffmpeg \
+    imagemagick \
     && rm -rf /var/lib/apt/lists/*
+
+# Ensure 'magick' command is available if APT installed ImageMagick 6
+RUN ln -sf /usr/bin/convert /usr/bin/magick
 
 WORKDIR /app
 

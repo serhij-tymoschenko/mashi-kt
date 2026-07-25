@@ -24,7 +24,8 @@ class AnimCombiner : KoinComponent {
     suspend fun generateAnim(
         tempDir: Path,
         t: Double,
-        greyscale: Boolean = false
+        greyscale: Boolean = false,
+        pixelate: Boolean = false
     ): Path {
         return withContext(Dispatchers.IO) {
             try {
@@ -92,7 +93,13 @@ class AnimCombiner : KoinComponent {
                 val videoFile = tempDir.toFile().listFiles { _, name -> name.endsWith(".webm") }?.firstOrNull()
                     ?: throw IllegalStateException("Playwright video was not recorded successfully.")
 
-                return@withContext makeGifFromVideo(videoFile.toPath(), tempDir, maxT - startOffsetSec, startOffsetSec)
+                val rawGifPath = makeGifFromVideo(videoFile.toPath(), tempDir, maxT - startOffsetSec, startOffsetSec)
+
+                if (pixelate) {
+                    return@withContext pixelateGif(rawGifPath, tempDir)
+                }
+
+                return@withContext rawGifPath
             } catch (e: Exception) {
                 System.err.println("Error in generateAnim: ${e.message}")
                 throw e
@@ -144,5 +151,21 @@ class AnimCombiner : KoinComponent {
         )
 
         return gifPath
+    }
+
+    private fun pixelateGif(inputGif: Path, tempDir: Path): Path {
+        val pixelatedGifPath = tempDir.resolve("result_pixelated.gif")
+
+        executeCmd(
+            "magick",
+            inputGif.absolutePathString(),
+            "-coalesce",
+            "-scale", "20%",
+            "-scale", "500%",
+            "-layers", "Optimize",
+            pixelatedGifPath.absolutePathString()
+        )
+
+        return pixelatedGifPath
     }
 }
