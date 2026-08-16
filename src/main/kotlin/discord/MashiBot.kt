@@ -6,6 +6,7 @@ import com.mashiverse.discord.modules.getNotifyEmbed
 import com.mashiverse.configs.*
 import com.mashiverse.data.db.daos.ReactionsDao
 import com.mashiverse.data.remote.dto.NotifyDto
+import com.mashiverse.discord.modules.RebootModule
 import com.mashiverse.services.NotificationService.notifyAndroidUsers
 import com.mashiverse.services.NotificationService.notifyIosUsers
 import dev.kord.common.entity.Snowflake
@@ -61,6 +62,7 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
     suspend fun setup() {
         MashupModule(kord)
         WalletModule(kord)
+        RebootModule(kord)
 
         // Event hooks
         kord.on<ReactionAddEvent> {

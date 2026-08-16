@@ -8,8 +8,8 @@ import java.nio.file.Paths
 import kotlin.io.path.inputStream
 
 object NotificationService {
-    private val androidCredPath = Paths.get(System.getProperty("user.dir"), "mash-it-android-app-firebase-adminsdk-fbsvc-bb09c6be56.json")
-    private val iosCredPath = Paths.get(System.getProperty("user.dir"), "mash-it-ios-firebase-adminsdk-fbsvc-149787883e.json")
+    private val androidCredPath = Paths.get(System.getProperty("user.dir"), "mash-it-android-app-firebase-adminsdk-fbsvc-d3f46e9e0f.json")
+    private val iosCredPath = Paths.get(System.getProperty("user.dir"), "mash-it-ios-firebase-adminsdk-fbsvc-67ff54426e.json")
 
     private val androidApp: FirebaseApp
     private val iosApp: FirebaseApp
