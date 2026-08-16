@@ -8,8 +8,8 @@ WORKDIR /app
 COPY gradle/ gradle/
 COPY gradlew build.gradle.kts settings.gradle.kts gradle.properties ./
 
-# Ensure gradlew has executable permissions
-RUN chmod +x ./gradlew
+# Fix CRLF line endings from Windows and ensure executable permissions
+RUN sed -i 's/\r$//' ./gradlew && chmod +x ./gradlew
 
 # Copy the rest of the application source code
 COPY src ./src
