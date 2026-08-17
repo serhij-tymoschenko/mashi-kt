@@ -8,8 +8,11 @@ import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.event.interaction.ChatInputCommandInteractionCreateEvent
 import dev.kord.core.on
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.milliseconds
 
 class RebootModule(private val kord: Kord) {
     init {
@@ -19,7 +22,7 @@ class RebootModule(private val kord: Kord) {
 
     private fun registerCommands() {
         kord.launch {
-            kord.createGlobalChatInputCommand("reboot", "Reboots Mashi bot VPS") {
+            kord.createGlobalChatInputCommand("reboot", "Restarts the bot container") {
                 dmPermission = false
             }
         }
@@ -46,20 +49,21 @@ class RebootModule(private val kord: Kord) {
 
         if (!(isOwner || isAdmin || isAuthorizedUser)) {
             event.interaction.respondEphemeral {
-                content = "❌ You do not have permission to reboot the system."
+                content = "❌ You do not have permission to restart the container."
             }
             return
         }
 
         val response = event.interaction.deferEphemeralResponse()
         response.respond {
-            content = "🔄 Initiating VPS reboot now..."
+            content = "🔄 Restarting container `mashi`..."
         }
 
+        // Slight delay to ensure the Discord response finishes sending before process termination
+        delay(1000.milliseconds)
+
         withContext(Dispatchers.IO) {
-            ProcessBuilder("sudo", "reboot")
-                .inheritIO()
-                .start()
+            exitProcess(0)
         }
     }
 }
