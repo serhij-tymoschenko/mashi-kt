@@ -4,7 +4,9 @@ import com.mashiverse.data.remote.dto.NotifyDto
 import dev.kord.common.Color
 import dev.kord.rest.builder.message.EmbedBuilder
 
-private fun String.toHttpIpfsUrl(): String = this.replace("ipfs://", "https://ipfs.io/ipfs/")
+private fun String.toHttpIpfsUrl(): String = this
+    .replace("ipfs://", "https://ipfs.io/ipfs/")
+    .replace("https://ipfs.io/ipfs/", "https://round-peach-hippopotamus.myfilebase.com/ipfs/")
 
 fun generateAssetsLinks(assets: NotifyDto.AssetsDto): String {
     val assetsList = listOf(
