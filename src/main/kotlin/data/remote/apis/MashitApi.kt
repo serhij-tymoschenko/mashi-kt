@@ -1,18 +1,13 @@
 ﻿package com.mashiverse.data.remote.apis
 
 import com.mashiverse.configs.MASHIT_BASE_URL
-import com.mashiverse.configs.MASHIT_API_KEY
 import com.mashiverse.data.remote.KtorClient
 import data.remote.dto.MashupDto
-import io.ktor.client.HttpClient
-
-import io.ktor.client.call.*
+import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.http.*
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import kotlin.getValue
 
 class MashitApi : KoinComponent {
     private val client by inject<HttpClient>()

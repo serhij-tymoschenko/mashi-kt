@@ -31,7 +31,7 @@ class ImageRepo : KoinComponent {
     private val imageDao by inject<ImageDao>()
     private val ipfsApi by inject<IpfsApi>()
 
-    private suspend fun getAsset(asset: Asset, colors: Colors): Pair<String, ByteArray>? {
+    suspend fun getAsset(asset: Asset, colors: Colors): Pair<String, ByteArray>? {
         return withContext(Dispatchers.IO) {
             return@withContext try {
                 val name = asset.name.lowercase()

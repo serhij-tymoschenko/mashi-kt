@@ -1,14 +1,16 @@
 ﻿package com.mashiverse.discord
 
-import com.mashiverse.discord.modules.MashupModule
-import com.mashiverse.discord.modules.WalletModule
-import com.mashiverse.discord.modules.getNotifyEmbed
 import com.mashiverse.configs.*
 import com.mashiverse.data.db.daos.ReactionsDao
 import com.mashiverse.data.remote.dto.NotifyDto
+import com.mashiverse.discord.modules.MashupModule
 import com.mashiverse.discord.modules.RebootModule
+import com.mashiverse.discord.modules.WalletModule
+import com.mashiverse.discord.modules.getNotifyEmbed
+import com.mashiverse.services.AnimService
 import com.mashiverse.services.NotificationService.notifyAndroidUsers
 import com.mashiverse.services.NotificationService.notifyIosUsers
+import dev.kord.common.Color
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.channel.createMessage
@@ -20,11 +22,17 @@ import dev.kord.core.on
 import dev.kord.gateway.PrivilegedIntent
 import dev.kord.rest.builder.message.allowedMentions
 import dev.kord.rest.builder.message.embed
+import io.ktor.client.request.forms.*
+import io.ktor.utils.io.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class MashiBot private constructor(val kord: Kord) : KoinComponent {
     private val reactionsDao by inject<ReactionsDao>()
+    private val animService by inject<AnimService>()
 
     companion object {
         @Volatile
@@ -109,8 +117,6 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
 
             val roleId = Snowflake(if (isRelease) RELEASES_ROLE_ID else APPROVALS_ROLE_ID)
 
-
-
             channel.createMessage {
                 content = "<@&$roleId>"
 
@@ -126,6 +132,47 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
 
                 allowedMentions {
                     roles.add(roleId)
+                }
+            }
+
+            if (!isRelease) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        val isAnyAnimated = animService.checkIfAnyAnimated(data)
+                        if (!isAnyAnimated) return@launch
+
+                        val anim = animService.generateAnim(data)
+                        if (anim != null) {
+                            val fileName = "embed_image.gif"
+
+                            channel.createMessage {
+                                content = "<@&$roleId>"
+
+                                addFile(fileName, ChannelProvider(anim.size.toLong()) {
+                                    ByteReadChannel(anim)
+                                })
+
+                                embed {
+                                    title = "Attachment*"
+                                    url = "https://mash-it.io/mashers"
+                                    color = Color(0x00FF00)
+
+                                    image = "attachment://$fileName"
+
+                                    footer {
+                                        text = "© 2026 mash-it x ${data.artistName}"
+                                    }
+                                }
+
+                                allowedMentions {
+                                    roles.add(roleId)
+                                }
+                            }
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                    }
                 }
             }
 
@@ -146,7 +193,6 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
                     println(e.message)
                 }
             }
-                //TODO: fetchAndCacheAsync(docId)
 
         } catch (e: Exception) {
             println(e)

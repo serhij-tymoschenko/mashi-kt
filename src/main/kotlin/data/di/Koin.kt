@@ -9,6 +9,7 @@ import com.mashiverse.data.remote.apis.IpfsApi
 import com.mashiverse.data.repos.ImageRepo
 import com.mashiverse.images.playwright.combiners.AnimCombiner
 import com.mashiverse.images.playwright.combiners.CompositeCombiner
+import com.mashiverse.services.AnimService
 import images.services.ImageService
 import io.ktor.client.HttpClient
 import io.ktor.server.application.*
@@ -58,6 +59,10 @@ fun Application.configureKoin() {
 
             single<ImageRepo>{
                 ImageRepo()
+            }
+
+            single<AnimService> {
+                AnimService()
             }
         })
     }

@@ -52,9 +52,6 @@ class MashupModule(private val kord: Kord) : KoinComponent {
     }
 
     private fun listenToInteractions() {
-        // Generic event type fires for both guild AND DM interactions.
-        // The guild-specific event type only fires inside servers, which is
-        // why these commands previously failed in DMs.
         kord.on<ChatInputCommandInteractionCreateEvent> {
             val command = interaction.command
             when (command.rootName) {
