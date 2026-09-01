@@ -23,6 +23,7 @@ import dev.kord.rest.builder.message.allowedMentions
 import dev.kord.rest.builder.message.embed
 import io.ktor.client.request.forms.*
 import io.ktor.utils.io.*
+import okhttp3.internal.connection.retryTlsHandshake
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -113,81 +114,59 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
 
             val roleId = Snowflake(if (isRelease) RELEASES_ROLE_ID else APPROVALS_ROLE_ID)
 
-            if (!isRelease) {
-                try {
-                    val isAnyAnimated = animService.checkIfAnyAnimated(data)
-                    if (!isAnyAnimated) {
-                        channel.createMessage {
-                            content = "<@&$roleId>"
+            try {
+                val isAnyAnimated = animService.checkIfAnyAnimated(data)
+                if (!isAnyAnimated) {
+                    channel.createMessage {
+                        content = "<@&$roleId>"
 
-                            embed {
-                                val builtEmbed = getNotifyEmbed(data, isRelease = false)
-                                title = builtEmbed.title
-                                url = builtEmbed.url
-                                color = builtEmbed.color
-                                image = builtEmbed.image
-                                footer = builtEmbed.footer
-                                fields = builtEmbed.fields
-                            }
-
-                            allowedMentions {
-                                roles.add(roleId)
-                            }
+                        embed {
+                            val builtEmbed = getNotifyEmbed(data, isRelease = isRelease)
+                            title = builtEmbed.title
+                            url = builtEmbed.url
+                            color = builtEmbed.color
+                            image = builtEmbed.image
+                            footer = builtEmbed.footer
+                            fields = builtEmbed.fields
                         }
 
-                        return
-                    }
-
-                    val anim = animService.generateAnim(data)
-                    if (anim != null) {
-                        val fileName = "embed_image.gif"
-
-                        channel.createMessage {
-                            content = "<@&$roleId>"
-
-                            addFile(fileName, ChannelProvider(anim.size.toLong()) {
-                                ByteReadChannel(anim)
-                            })
-
-                            embed {
-                                val builtEmbed = getNotifyEmbed(data, false)
-                                title = builtEmbed.title
-                                url = builtEmbed.url
-                                color = builtEmbed.color
-                                image = "attachment://$fileName"
-                                footer = builtEmbed.footer
-                                fields = builtEmbed.fields
-                            }
-
-                            allowedMentions {
-                                roles.add(roleId)
-                            }
+                        allowedMentions {
+                            roles.add(roleId)
                         }
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
+
+                    return
                 }
-            }
 
-            if (isRelease) {
-                channel.createMessage {
-                    content = "<@&$roleId>"
+                val anim = animService.generateAnim(data)
+                if (anim != null) {
+                    val fileName = "embed_image.gif"
 
-                    embed {
-                        val builtEmbed = getNotifyEmbed(data, isRelease = true)
-                        title = builtEmbed.title
-                        url = builtEmbed.url
-                        color = builtEmbed.color
-                        image = builtEmbed.image
-                        footer = builtEmbed.footer
-                        fields = builtEmbed.fields
-                    }
+                    channel.createMessage {
+                        content = "<@&$roleId>"
 
-                    allowedMentions {
-                        roles.add(roleId)
+                        addFile(fileName, ChannelProvider(anim.size.toLong()) {
+                            ByteReadChannel(anim)
+                        })
+
+                        embed {
+                            val builtEmbed = getNotifyEmbed(data, isRelease)
+                            title = builtEmbed.title
+                            url = builtEmbed.url
+                            color = builtEmbed.color
+                            image = "attachment://$fileName"
+                            footer = builtEmbed.footer
+                            fields = builtEmbed.fields
+                        }
+
+                        allowedMentions {
+                            roles.add(roleId)
+                        }
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
             }
 
             if (isRelease && data.listing != null) {
