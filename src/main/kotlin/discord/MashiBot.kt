@@ -10,7 +10,6 @@ import com.mashiverse.discord.modules.getNotifyEmbed
 import com.mashiverse.services.AnimService
 import com.mashiverse.services.NotificationService.notifyAndroidUsers
 import com.mashiverse.services.NotificationService.notifyIosUsers
-import dev.kord.common.Color
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.channel.createMessage
@@ -24,9 +23,6 @@ import dev.kord.rest.builder.message.allowedMentions
 import dev.kord.rest.builder.message.embed
 import io.ktor.client.request.forms.*
 import io.ktor.utils.io.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -117,61 +113,79 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
 
             val roleId = Snowflake(if (isRelease) RELEASES_ROLE_ID else APPROVALS_ROLE_ID)
 
-            channel.createMessage {
-                content = "<@&$roleId>"
+            if (!isRelease) {
+                try {
+                    val isAnyAnimated = animService.checkIfAnyAnimated(data)
+                    if (!isAnyAnimated) {
+                        channel.createMessage {
+                            content = "<@&$roleId>"
 
-                embed {
-                    val builtEmbed = getNotifyEmbed(data, isRelease)
-                    title = builtEmbed.title
-                    url = builtEmbed.url
-                    color = builtEmbed.color
-                    image = builtEmbed.image
-                    footer = builtEmbed.footer
-                    fields = builtEmbed.fields
-                }
+                            embed {
+                                val builtEmbed = getNotifyEmbed(data, isRelease = false)
+                                title = builtEmbed.title
+                                url = builtEmbed.url
+                                color = builtEmbed.color
+                                image = builtEmbed.image
+                                footer = builtEmbed.footer
+                                fields = builtEmbed.fields
+                            }
 
-                allowedMentions {
-                    roles.add(roleId)
+                            allowedMentions {
+                                roles.add(roleId)
+                            }
+                        }
+
+                        return
+                    }
+
+                    val anim = animService.generateAnim(data)
+                    if (anim != null) {
+                        val fileName = "embed_image.gif"
+
+                        channel.createMessage {
+                            content = "<@&$roleId>"
+
+                            addFile(fileName, ChannelProvider(anim.size.toLong()) {
+                                ByteReadChannel(anim)
+                            })
+
+                            embed {
+                                val builtEmbed = getNotifyEmbed(data, false)
+                                title = builtEmbed.title
+                                url = builtEmbed.url
+                                color = builtEmbed.color
+                                image = "attachment://$fileName"
+                                footer = builtEmbed.footer
+                                fields = builtEmbed.fields
+                            }
+
+                            allowedMentions {
+                                roles.add(roleId)
+                            }
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
                 }
             }
 
-            if (!isRelease) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val isAnyAnimated = animService.checkIfAnyAnimated(data)
-                        if (!isAnyAnimated) return@launch
+            if (isRelease) {
+                channel.createMessage {
+                    content = "<@&$roleId>"
 
-                        val anim = animService.generateAnim(data)
-                        if (anim != null) {
-                            val fileName = "embed_image.gif"
+                    embed {
+                        val builtEmbed = getNotifyEmbed(data, isRelease = true)
+                        title = builtEmbed.title
+                        url = builtEmbed.url
+                        color = builtEmbed.color
+                        image = builtEmbed.image
+                        footer = builtEmbed.footer
+                        fields = builtEmbed.fields
+                    }
 
-                            channel.createMessage {
-                                content = "<@&$roleId>"
-
-                                addFile(fileName, ChannelProvider(anim.size.toLong()) {
-                                    ByteReadChannel(anim)
-                                })
-
-                                embed {
-                                    title = "Attachment*"
-                                    url = "https://mash-it.io/mashers"
-                                    color = Color(0x00FF00)
-
-                                    image = "attachment://$fileName"
-
-                                    footer {
-                                        text = "© 2026 mash-it x ${data.artistName}"
-                                    }
-                                }
-
-                                allowedMentions {
-                                    roles.add(roleId)
-                                }
-                            }
-                        }
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
+                    allowedMentions {
+                        roles.add(roleId)
                     }
                 }
             }
