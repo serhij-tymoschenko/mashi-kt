@@ -23,7 +23,6 @@ import dev.kord.rest.builder.message.allowedMentions
 import dev.kord.rest.builder.message.embed
 import io.ktor.client.request.forms.*
 import io.ktor.utils.io.*
-import okhttp3.internal.connection.retryTlsHandshake
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -134,38 +133,34 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
                             roles.add(roleId)
                         }
                     }
+                } else {
+                    val anim = animService.generateAnim(data)
+                    if (anim != null) {
+                        val fileName = "embed_image.gif"
 
-                    return
-                }
+                        channel.createMessage {
+                            content = "<@&$roleId>"
 
-                val anim = animService.generateAnim(data)
-                if (anim != null) {
-                    val fileName = "embed_image.gif"
+                            addFile(fileName, ChannelProvider(anim.size.toLong()) {
+                                ByteReadChannel(anim)
+                            })
 
-                    channel.createMessage {
-                        content = "<@&$roleId>"
+                            embed {
+                                val builtEmbed = getNotifyEmbed(data, isRelease)
+                                title = builtEmbed.title
+                                url = builtEmbed.url
+                                color = builtEmbed.color
+                                image = "attachment://$fileName"
+                                footer = builtEmbed.footer
+                                fields = builtEmbed.fields
+                            }
 
-                        addFile(fileName, ChannelProvider(anim.size.toLong()) {
-                            ByteReadChannel(anim)
-                        })
-
-                        embed {
-                            val builtEmbed = getNotifyEmbed(data, isRelease)
-                            title = builtEmbed.title
-                            url = builtEmbed.url
-                            color = builtEmbed.color
-                            image = "attachment://$fileName"
-                            footer = builtEmbed.footer
-                            fields = builtEmbed.fields
-                        }
-
-                        allowedMentions {
-                            roles.add(roleId)
+                            allowedMentions {
+                                roles.add(roleId)
+                            }
                         }
                     }
                 }
-            } catch (e: CancellationException) {
-                throw e
             } catch (e: Exception) {
             }
 
