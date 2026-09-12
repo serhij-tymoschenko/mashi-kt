@@ -96,45 +96,22 @@ class AnimCombiner : KoinComponent {
     }
 
     private fun makeGifFromVideo(videoPath: Path, tempDir: Path, maxT: Double, startOffsetSec: Double): Path {
-        val palettePath = tempDir.resolve("palette.png")
         val gifPath = tempDir.resolve("result.gif")
-        val dimensions = "${GIF_WIDTH}x${GIF_HEIGHT}"
-        val seekArg = String.format("%.3f", startOffsetSec)
+        val seekArg = String.format(java.util.Locale.US, "%.3f", startOffsetSec)
+        val durationArg = String.format(java.util.Locale.US, "%.3f", maxT)
 
-        // Step 1: Generate palette starting AFTER the blank lead-in, not absolute 0,
-        // so the white frames don't pollute the color palette either.
+        // Common base filters: scale/pad once before splitting to the palette generator
+        val baseFilter = "fps=$PLAYBACK_FPS,scale=$GIF_WIDTH:$GIF_HEIGHT:force_original_aspect_ratio=decrease,pad=$GIF_WIDTH:$GIF_HEIGHT:(ow-iw)/2:(oh-ih)/2,setsar=1"
+        val filterGraph = "[0:v]$baseFilter,split[stream][paletteSource];[paletteSource]palettegen=max_colors=256[palette];[stream][palette]paletteuse=dither=none"
+
         executeCmd(
             "ffmpeg",
             "-y",
-            "-threads",
-            "0",
-            "-ss",
-            seekArg,
-            "-i",
-            videoPath.absolutePathString(),
-            "-vf",
-            "fps=$PLAYBACK_FPS,scale=$GIF_WIDTH:$GIF_HEIGHT:force_original_aspect_ratio=decrease,pad=$GIF_WIDTH:$GIF_HEIGHT:(ow-iw)/2:(oh-ih)/2,setsar=1,palettegen=max_colors=256",
-            palettePath.absolutePathString()
-        )
-
-        // Step 2: Render final GIF starting exactly at the first real (non-white) frame
-        executeCmd(
-            "ffmpeg",
-            "-y",
-            "-threads",
-            "0",
-            "-ss",
-            seekArg,
-            "-t",
-            String.format("%.3f", maxT),
-            "-i",
-            videoPath.absolutePathString(),
-            "-i",
-            palettePath.absolutePathString(),
-            "-s",
-            dimensions,
-            "-lavfi",
-            "[0:v]fps=$PLAYBACK_FPS,scale=$GIF_WIDTH:$GIF_HEIGHT:force_original_aspect_ratio=decrease,pad=$GIF_WIDTH:$GIF_HEIGHT:(ow-iw)/2:(oh-ih)/2,setsar=1[x];[x][1:v]paletteuse=dither=none",
+            "-threads", "0",
+            "-ss", seekArg,
+            "-t", durationArg,
+            "-i", videoPath.absolutePathString(),
+            "-filter_complex", filterGraph,
             gifPath.absolutePathString()
         )
 
