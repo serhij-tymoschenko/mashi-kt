@@ -1,6 +1,5 @@
 ﻿package com.mashiverse.images.playwright.combiners
 
-import com.google.gson.JsonObject
 import com.mashiverse.configs.PNG_HEIGHT
 import com.mashiverse.configs.PNG_WIDTH
 import com.mashiverse.images.playwright.PlaywrightService
@@ -38,26 +37,34 @@ class CompositeCombiner : KoinComponent {
                     page.setContent(htmlContent)
                     preparePage(page, getPngArgs())
 
+                    // Wait for initial load and image decodes (LOAD avoids NETWORKIDLE's mandatory 500ms delay)
+                    page.waitForLoadState(LoadState.LOAD)
+                    page.waitForFunction(
+                        "Array.from(document.images).every(img => img.complete && img.naturalWidth > 0)"
+                    )
 
-                    // CRITICAL: Force Playwright to wait until all assets/images are fully loaded
-                    page.waitForLoadState(LoadState.NETWORKIDLE)
+                    // Option 1: Freeze frame by drawing each image onto a canvas and swapping src
+                    page.evaluate(
+                        """
+                        () => {
+                            for (const img of document.querySelectorAll('img')) {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.naturalWidth;
+                                canvas.height = img.naturalHeight;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                img.src = canvas.toDataURL();
+                            }
+                        }
+                        """.trimIndent()
+                    )
+
+                    // Ensure all swapped data-URL images are completed rendering
                     page.waitForFunction(
                         "Array.from(document.images).every(img => img.complete)"
                     )
 
-                    val client = page.context().newCDPSession(page)
-
-                    val initialPolicyArgs = JsonObject().apply {
-                        addProperty("policy", "advance")
-                        addProperty("budget", 0)
-                    }
-
-                    client.send(
-                        "Emulation.setVirtualTimePolicy",
-                        initialPolicyArgs
-                    )
-
-                    // Capture immediately now that rendering and time budget are synchronized
+                    // Capture immediately now that images are converted to static canvases
                     page.screenshot(
                         Page.ScreenshotOptions()
                             .setPath(framePath)
@@ -71,7 +78,7 @@ class CompositeCombiner : KoinComponent {
 
             return framePath
         } catch (e: Exception) {
-            System.err.println("Error in generateComposite: ${e.message}") // Fixed log message name
+            System.err.println("Error in generateComposite: ${e.message}")
             throw e
         }
     }
