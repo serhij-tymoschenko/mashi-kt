@@ -33,7 +33,7 @@ class ImageRepo : KoinComponent {
 
     suspend fun getAsset(asset: Asset, colors: Colors): Pair<String, ByteArray>? {
         return withContext(Dispatchers.IO) {
-            return@withContext try {
+            try {
                 val name = asset.name.lowercase()
                 val url = asset.image
 
@@ -54,64 +54,77 @@ class ImageRepo : KoinComponent {
                 }
                 Pair(name, data)
             } catch (e: Exception) {
-                print(e.message)
+                System.err.println("Failed to fetch asset: ${e.message}")
                 null
             }
         }
     }
 
-    suspend fun getImage(
-        mashup: Mashup, downloadType: DownloadType = DownloadType.PNG, mintedName: String? = null
-    ): ByteArray? {
-        return withContext(Dispatchers.IO) {
-            val tempDir = Paths.get(System.getProperty("java.io.tmpdir")).resolve("mashi-temp")
-            Files.createDirectories(tempDir)
+    /**
+     * Prepares composite data directly.
+     * PNG is rendered completely in-memory.
+     * GIF reads final output into memory before rmDir deletes the temp workspace.
+     */
+    suspend fun getImageData(
+        mashup: Mashup,
+        downloadType: DownloadType = DownloadType.PNG,
+        mintedName: String? = null
+    ): Pair<ByteArray, Long>? = withContext(Dispatchers.IO) {
+        val assets = mashup.traits
+        val colors = mashup.colors
 
-            val uniqueDir = tempDir.resolve(UUID.randomUUID().toString())
-            Files.createDirectories(uniqueDir)
+        if (assets.isEmpty()) return@withContext null
 
-            try {
-                val assets = mashup.traits
-                val colors = mashup.colors
+        val assetJobs = assets.map { asset -> async { getAsset(asset, colors) } }
+        val srcs = assetJobs.awaitAll().filterNotNull().toMap()
 
-                if (assets.isEmpty()) {
-                    return@withContext null
-                }
-
-                val assetJobs = assets.map { asset ->
-                    async { getAsset(asset, colors) }
-                }
-
-                val srcs = assetJobs.awaitAll().filterNotNull().toMap()
-
-                val traits = LAYER_ORDER.mapNotNull { name -> srcs[name] }.toMutableList()
-
-                if (!mintedName.isNullOrEmpty()) {
-                    val mintedTrait = getMintedTrait(mintedName)
-                    traits.add(mintedTrait)
-                }
-
-                traits.forEachIndexed { index, bytes ->
-                    val mime = getMime(bytes)
-                    val b64 = Base64.getEncoder().encodeToString(bytes)
-                    val filePath = uniqueDir.resolve(index.toString())
-                    val fileContent = "data:$mime;base64,$b64".toByteArray(Charsets.UTF_8)
-                    writeFile(filePath, fileContent)
-                }
-
-                val imagePath: Path = if (downloadType == DownloadType.PNG) {
-                    compositeCombiner.generateComposite(uniqueDir)
-                } else {
-                    val maxT = getMaxDuration(traits)
-                    animCombiner.generateAnim(uniqueDir, maxT)
-                }
-
-                return@withContext readFile(imagePath)
-            } catch (e: Exception) {
-                return@withContext null
-            } finally {
-                rmDir(uniqueDir)
-            }
+        val traits = LAYER_ORDER.mapNotNull { name -> srcs[name] }.toMutableList()
+        if (!mintedName.isNullOrEmpty()) {
+            traits.add(getMintedTrait(mintedName))
         }
+
+        val traitsWithMime = traits.map { bytes -> Pair(getMime(bytes), bytes) }
+
+        // 1. PNG: In-memory pipeline, zero disk writes
+        if (downloadType == DownloadType.PNG) {
+            val bytes = compositeCombiner.generateComposite(traitsWithMime)
+            return@withContext Pair(bytes, bytes.size.toLong())
+        }
+
+        // 2. GIF: Render in temp directory (/dev/shm if present)
+        val baseDir = Paths.get("/dev/shm").takeIf { Files.exists(it) }
+            ?: Paths.get(System.getProperty("java.io.tmpdir")).resolve("mashi-temp")
+        Files.createDirectories(baseDir)
+
+        val uniqueDir = Files.createTempDirectory(baseDir, "anim-")
+
+        try {
+            traitsWithMime.forEachIndexed { index, (mime, bytes) ->
+                val b64 = Base64.getEncoder().encodeToString(bytes)
+                val filePath = uniqueDir.resolve(index.toString())
+                val fileContent = "data:$mime;base64,$b64".toByteArray(Charsets.UTF_8)
+                writeFile(filePath, fileContent)
+            }
+
+            val maxT = getMaxDuration(traits)
+            val gifPath: Path = animCombiner.generateAnim(uniqueDir, maxT)
+
+            // Read into byte array BEFORE rmDir destroys the file
+            val bytes = readFile(gifPath)
+            Pair(bytes, bytes.size.toLong())
+        } finally {
+            rmDir(uniqueDir)
+        }
+    }
+
+    /**
+     * Backward-compatible helper returning ByteArray.
+     */
+    suspend fun getImage(
+        mashup: Mashup,
+        downloadType: DownloadType = DownloadType.PNG,
+        mintedName: String? = null
+    ): ByteArray? {
+        return getImageData(mashup, downloadType, mintedName)?.first
     }
 }
