@@ -45,6 +45,7 @@ class MashupModule(private val kord: Kord) : KoinComponent {
                 string("image", "Image type") {
                     choice("PNG", "PNG")
                     choice("GIF", "GIF")
+                    choice("SMALLER_GIF", "SMALLER_GIF")
                 }
             }
             kord.createGlobalChatInputCommand("delete_mashup", "Deletes mashup") {

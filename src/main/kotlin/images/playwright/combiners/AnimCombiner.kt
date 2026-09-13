@@ -1,9 +1,6 @@
 ﻿package com.mashiverse.images.playwright.combiners
 
-import com.mashiverse.configs.DURATION_LIMIT_SEC
-import com.mashiverse.configs.GIF_HEIGHT
-import com.mashiverse.configs.GIF_WIDTH
-import com.mashiverse.configs.PLAYBACK_FPS
+import com.mashiverse.configs.*
 import com.mashiverse.images.playwright.PlaywrightPool
 import com.mashiverse.utils.helpers.executeCmd
 import com.mashiverse.utils.helpers.readImageFiles
@@ -18,15 +15,15 @@ import kotlin.io.path.absolutePathString
 
 class AnimCombiner : KoinComponent {
 
-    suspend fun generateAnim(tempDir: Path, t: Double): Path {
+    suspend fun generateAnim(tempDir: Path, t: Double, isLowerRes: Boolean = false): Path {
         // Target duration fixed to exactly 5 seconds
         val targetDurationSec = DURATION_LIMIT_SEC.toDouble()
 
         val imageUrls = readImageFiles(tempDir)
         val htmlContent = prepareHtml(
             urls = imageUrls,
-            width = GIF_WIDTH,
-            height = GIF_HEIGHT
+            width = if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
+            height = if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
         )
 
         var startOffsetSec = 0.0
@@ -34,22 +31,35 @@ class AnimCombiner : KoinComponent {
         PlaywrightPool.execute { browser ->
             // 1. Warm-up pass
             val warmupCtx = browser.newContext(
-                Browser.NewContextOptions().setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
+                Browser.NewContextOptions().setViewportSize(
+                    ViewportSize(
+                        if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
+                        if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
+                    )
+                )
             )
             val correctedHtml = warmupCtx.use { ctx ->
                 val warmupPage = ctx.newPage()
                 warmupPage.setContent(htmlContent)
                 warmupPage.waitForLoadState(LoadState.LOAD)
-                preparePage(warmupPage, getGifArgs())
+                preparePage(warmupPage, if (isLowerRes) getLowerResGifArgs() else getGifArgs())
                 warmupPage.content()
             }
 
             // 2. Recording pass
             val recordingCtx = browser.newContext(
                 Browser.NewContextOptions()
-                    .setViewportSize(ViewportSize(GIF_WIDTH, GIF_HEIGHT))
+                    .setViewportSize(
+                        ViewportSize(
+                            if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
+                            if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
+                        )
+                    )
                     .setRecordVideoDir(tempDir)
-                    .setRecordVideoSize(GIF_WIDTH, GIF_HEIGHT)
+                    .setRecordVideoSize(
+                        if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
+                        if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
+                    )
             )
 
             recordingCtx.use { ctx ->
@@ -82,7 +92,8 @@ class AnimCombiner : KoinComponent {
                 videoPath = videoFile.toPath(),
                 tempDir = tempDir,
                 durationSec = targetDurationSec,
-                startOffsetSec = startOffsetSec
+                startOffsetSec = startOffsetSec,
+                isLowerRes = isLowerRes
             )
         }
     }
@@ -91,7 +102,8 @@ class AnimCombiner : KoinComponent {
         videoPath: Path,
         tempDir: Path,
         durationSec: Double,
-        startOffsetSec: Double
+        startOffsetSec: Double,
+        isLowerRes: Boolean = false
     ): Path {
         val gifPath = tempDir.resolve("result.gif")
 
@@ -99,7 +111,8 @@ class AnimCombiner : KoinComponent {
         val seekArg = String.format(java.util.Locale.US, "%.3f", startOffsetSec)
         val durationArg = String.format(java.util.Locale.US, "%.3f", durationSec) // "5.000"
 
-        val baseFilter = "fps=$PLAYBACK_FPS,scale=$GIF_WIDTH:$GIF_HEIGHT:force_original_aspect_ratio=decrease,pad=$GIF_WIDTH:$GIF_HEIGHT:(ow-iw)/2:(oh-ih)/2,setsar=1"
+        val baseFilter =
+            "fps=$PLAYBACK_FPS,scale=${if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH}:${if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT}:force_original_aspect_ratio=decrease,pad=${if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH}:${if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
         // diff_mode=none prevents loop artifacting; bayer dithering keeps size down with 256 colors
         val filterGraph = "[0:v]$baseFilter,split[stream][paletteSource];" +
