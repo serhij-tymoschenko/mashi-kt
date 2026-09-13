@@ -70,11 +70,8 @@ class MashupModule(private val kord: Kord) : KoinComponent {
         val imageOpt = interaction.command.options["image"]?.value?.toString() ?: "PNG"
         val userId = interaction.user.id.value.toLong()
 
-        // 1. Concurrently fetch the wallet and defer the Discord response
-        val walletDeferred = async { userDao.getWallet(userId) }
-        val responseDeferred = async { interaction.deferPublicResponse() }
+        val wallet = userDao.getWallet(userId)
 
-        val wallet = walletDeferred.await()
         if (wallet == null) {
             interaction.deferEphemeralResponse().respond {
                 content = "Please use /connect_wallet command"
@@ -82,7 +79,8 @@ class MashupModule(private val kord: Kord) : KoinComponent {
             return@coroutineScope
         }
 
-        val response = responseDeferred.await()
+        // 2. Wallet exists -> Now defer publicly
+        val response = interaction.deferPublicResponse()
 
         try {
             val downloadType = DownloadType.valueOf(imageOpt)

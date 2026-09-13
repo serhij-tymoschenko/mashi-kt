@@ -8,8 +8,6 @@ import com.mashiverse.discord.modules.RebootModule
 import com.mashiverse.discord.modules.WalletModule
 import com.mashiverse.discord.modules.getNotifyEmbed
 import com.mashiverse.services.AnimService
-import com.mashiverse.services.NotificationService.notifyAndroidUsers
-import com.mashiverse.services.NotificationService.notifyIosUsers
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.behavior.channel.createMessage
@@ -67,43 +65,6 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
         MashupModule(kord)
         WalletModule(kord)
         RebootModule(kord)
-
-        // Event hooks
-        kord.on<ReactionAddEvent> {
-            if (emoji.name != "🔥" || userId == kord.getSelf().id) return@on
-
-            try {
-                val msg = message.asMessage()
-                if (!msg.author?.isBot!!) return@on
-
-                val posterId = getPosterIdFromMessage(msg)
-                if (posterId != null && posterId != userId.value.toLong()) {
-                    reactionsDao.updateReactionsCount(posterId, 1)
-                    val totalCount = reactionsDao.getReactionsCount(posterId)
-
-                    if (totalCount > 0 && totalCount % 25 == 0) {
-                        val channel = msg.getChannel() as TextChannel
-                        channel.createMessage("🔥! <@$posterId> just hit $totalCount reactions!")
-                    }
-                }
-            } catch (_: Exception) {
-            }
-        }
-
-        kord.on<ReactionRemoveEvent> {
-            if (emoji.name != "🔥" || userId == kord.getSelf().id) return@on
-
-            try {
-                val msg = message.asMessage()
-                if (!msg.author?.isBot!!) return@on
-
-                val posterId = getPosterIdFromMessage(msg)
-                if (posterId != null && posterId != userId.value.toLong()) {
-                    reactionsDao.updateReactionsCount(posterId, -1)
-                }
-            } catch (_: Exception) {
-            }
-        }
     }
 
     suspend fun notify(data: NotifyDto, isRelease: Boolean = true) {
@@ -163,25 +124,6 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
                 }
             } catch (e: Exception) {
             }
-
-            if (isRelease && data.listing != null) {
-                val listing = data.listing
-                val priceMatic = listing.priceMatic
-                val maxSupply = listing.maxSupply
-                val maxPerWallet = listing.maxPerWallet
-                val docId = data.docId
-
-                val androidTitle = "${data.title} by ${data.artistName} is out"
-                val androidBody = "Price: ${priceMatic}USDC\nSupply: $maxSupply\nMax per-wallet: $maxPerWallet"
-
-                try {
-                    notifyAndroidUsers(title = androidTitle, body = androidBody, listingId = docId)
-                    notifyIosUsers(title = androidTitle, body = androidBody, listingId = docId)
-                } catch (e: Exception) {
-                    println(e.message)
-                }
-            }
-
         } catch (e: Exception) {
             println(e)
             val testChannel = kord.getChannelOf<TextChannel>(Snowflake(TEST_CHANNEL_ID))
