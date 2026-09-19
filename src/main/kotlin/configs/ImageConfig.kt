@@ -18,10 +18,10 @@ const val LOWER_RES_GIF_TRAIT_WIDTH = (380 * 1.5).toInt()
 const val LOWER_RES_GIF_TRAIT_HEIGHT = (600 * 1.5).toInt()
 
 // PNG
-const val PNG_WIDTH = 552 * 3
-const val PNG_HEIGHT = 736 * 3
-const val PNG_TRAIT_WIDTH = 380 * 3
-const val PNG_TRAIT_HEIGHT = 600 * 3
+const val PNG_WIDTH = 552 * 2
+const val PNG_HEIGHT = 736 * 2
+const val PNG_TRAIT_WIDTH = 380 * 2
+const val PNG_TRAIT_HEIGHT = 600 * 2
 
 // Other
 const val MAX_GENERATIONS = 10

@@ -16,28 +16,27 @@ import kotlin.io.path.absolutePathString
 class AnimCombiner : KoinComponent {
 
     suspend fun generateAnim(tempDir: Path, t: Double, isLowerRes: Boolean = false): Path {
-        // Target duration fixed to exactly 5 seconds
         val targetDurationSec = DURATION_LIMIT_SEC.toDouble()
+        val width = if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH
+        val height = if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
 
         val imageUrls = readImageFiles(tempDir)
         val htmlContent = prepareHtml(
             urls = imageUrls,
-            width = if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
-            height = if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
+            width = width,
+            height = height
         )
 
         var startOffsetSec = 0.0
 
         PlaywrightPool.execute { browser ->
-            // 1. Warm-up pass
+            // 1. Warm-up pass to resolve dimensions and structure
             val warmupCtx = browser.newContext(
-                Browser.NewContextOptions().setViewportSize(
-                    ViewportSize(
-                        if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
-                        if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
-                    )
-                )
+                Browser.NewContextOptions()
+                    .setViewportSize(ViewportSize(width, height))
+                    .setDeviceScaleFactor(1.0)
             )
+
             val correctedHtml = warmupCtx.use { ctx ->
                 val warmupPage = ctx.newPage()
                 warmupPage.setContent(htmlContent)
@@ -49,17 +48,10 @@ class AnimCombiner : KoinComponent {
             // 2. Recording pass
             val recordingCtx = browser.newContext(
                 Browser.NewContextOptions()
-                    .setViewportSize(
-                        ViewportSize(
-                            if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
-                            if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
-                        )
-                    )
+                    .setViewportSize(ViewportSize(width, height))
+                    .setDeviceScaleFactor(1.0)
                     .setRecordVideoDir(tempDir)
-                    .setRecordVideoSize(
-                        if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH,
-                        if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
-                    )
+                    .setRecordVideoSize(width, height)
             )
 
             recordingCtx.use { ctx ->
@@ -67,17 +59,23 @@ class AnimCombiner : KoinComponent {
                 val recordingStartedAt = System.nanoTime()
 
                 page.setContent(correctedHtml)
-                page.waitForFunction("Array.from(document.images).every(img => img.complete)")
 
-                // Time elapsed from when the recording started until the page was ready
-                startOffsetSec = (System.nanoTime() - recordingStartedAt) / 1_000_000_000.0 + (1.0 / PLAYBACK_FPS)
+                // Force explicit image decoding to avoid blank missing frames at start
+                page.evaluate(
+                    """
+                    () => Promise.all(
+                        Array.from(document.images).map(img => img.decode ? img.decode().catch(() => {}) : Promise.resolve())
+                    )
+                    """.trimIndent()
+                )
 
-                // Sleep for: target duration (5.0s) + initial loading offset + 0.5s safety buffer
-                // This ensures FFmpeg has more than enough frames to cut the full 5.0s cleanly
-                val totalSleepMs = ((targetDurationSec + startOffsetSec + 0.5) * 1000).toLong()
+                // Calculate offset from initial context record trigger to paint finish
+                startOffsetSec = (System.nanoTime() - recordingStartedAt) / 1_000_000_000.0
+
+                // Total sleep duration matching exact frame capture window
+                val totalSleepMs = ((targetDurationSec + startOffsetSec + 0.3) * 1000).toLong()
                 Thread.sleep(totalSleepMs)
 
-                // Flush encoder buffers
                 page.close()
             }
         }
@@ -106,32 +104,33 @@ class AnimCombiner : KoinComponent {
         isLowerRes: Boolean = false
     ): Path {
         val gifPath = tempDir.resolve("result.gif")
+        val width = if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH
+        val height = if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT
 
-        // Format timestamps strictly
+        // Format seek accurately
         val seekArg = String.format(java.util.Locale.US, "%.3f", startOffsetSec)
-        val durationArg = String.format(java.util.Locale.US, "%.3f", durationSec) // "5.000"
+        val durationArg = String.format(java.util.Locale.US, "%.3f", durationSec)
 
+        // Enforce nearest-neighbor scaling inside FFmpeg filter chain to prevent pixel blurring
         val baseFilter =
-            "fps=$PLAYBACK_FPS,scale=${if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH}:${if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT}:force_original_aspect_ratio=decrease,pad=${if (isLowerRes) LOWER_RES_GIF_WIDTH else GIF_WIDTH}:${if (isLowerRes) LOWER_RES_GIF_HEIGHT else GIF_HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+            "fps=$PLAYBACK_FPS,scale=$width:$height:flags=neighbor:force_original_aspect_ratio=decrease,pad=$width:$height:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
-        // diff_mode=none prevents loop artifacting; bayer dithering keeps size down with 256 colors
         val filterGraph = "[0:v]$baseFilter,split[stream][paletteSource];" +
                 "[paletteSource]palettegen=max_colors=256:stats_mode=diff[palette];" +
                 "[stream][palette]paletteuse=dither=bayer:bayer_scale=3:diff_mode=none"
 
-        // Step 1: Extract exactly 5 seconds
+        // Input-side accurate seek (-ss before -i) skips discarded initial frames immediately
         executeCmd(
             "ffmpeg",
             "-y",
             "-threads", "0",
             "-ss", seekArg,
-            "-t", durationArg,
             "-i", videoPath.absolutePathString(),
+            "-t", durationArg,
             "-filter_complex", filterGraph,
             gifPath.absolutePathString()
         )
 
-        // Step 2: Lossy compression keeping exactly 5 seconds and 256 colors
         executeCmd(
             "gifsicle",
             "-b",

@@ -49,7 +49,20 @@ fun prepareHtml(
     }.joinToString("\n")
 
     return """
+        <!DOCTYPE html>
         <html>
+            <head>
+                <style>
+                    * {
+                        box-sizing: border-box;
+                    }
+                    img, canvas {
+                        image-rendering: -webkit-optimize-contrast;
+                        image-rendering: crisp-edges;
+                        image-rendering: pixelated;
+                    }
+                </style>
+            </head>
             <body style="margin:0; width:${width}px; height:${height}px; background:transparent; overflow:hidden;">
                 $imageTags
             </body>

@@ -27,7 +27,9 @@ class CompositeCombiner : KoinComponent {
 
         return PlaywrightPool.execute { browser ->
             val context = browser.newContext(
-                Browser.NewContextOptions().setViewportSize(ViewportSize(PNG_WIDTH, PNG_HEIGHT))
+                Browser.NewContextOptions()
+                    .setViewportSize(ViewportSize(PNG_WIDTH, PNG_HEIGHT))
+                    .setDeviceScaleFactor(1.0)
             )
 
             context.use { ctx ->
@@ -41,7 +43,7 @@ class CompositeCombiner : KoinComponent {
                     "Array.from(document.images).every(img => img.complete && img.naturalWidth > 0)"
                 )
 
-                // Freeze frame by drawing each image onto a canvas and swapping src
+                // Freeze frame by drawing each image onto a canvas with smoothing disabled
                 page.evaluate(
                     """
                     () => {
@@ -50,6 +52,13 @@ class CompositeCombiner : KoinComponent {
                             canvas.width = img.naturalWidth;
                             canvas.height = img.naturalHeight;
                             const ctx = canvas.getContext('2d');
+                            
+                            // Disable image smoothing on 2D context to avoid bilinear blurring
+                            ctx.imageSmoothingEnabled = false;
+                            ctx.webkitImageSmoothingEnabled = false;
+                            ctx.mozImageSmoothingEnabled = false;
+                            ctx.msImageSmoothingEnabled = false;
+
                             ctx.drawImage(img, 0, 0);
                             img.src = canvas.toDataURL();
                         }
