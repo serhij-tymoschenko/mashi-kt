@@ -57,9 +57,9 @@ fun prepareHtml(
                         box-sizing: border-box;
                     }
                     img, canvas {
-                        image-rendering: -webkit-optimize-contrast;
-                        image-rendering: crisp-edges;
-                        image-rendering: pixelated;
+                        /* Force smooth scaling across engines */
+                        image-rendering: auto;
+                        image-rendering: smooth;
                     }
                 </style>
             </head>
