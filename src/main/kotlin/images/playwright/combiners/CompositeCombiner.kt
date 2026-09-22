@@ -9,11 +9,14 @@ import com.microsoft.playwright.options.LoadState
 import com.microsoft.playwright.options.ScreenshotType
 import com.microsoft.playwright.options.ViewportSize
 import org.koin.core.component.KoinComponent
-import java.util.*
+import java.util.Base64
 
 class CompositeCombiner : KoinComponent {
 
-    suspend fun generateComposite(traitsBytes: List<Pair<String, ByteArray>>): ByteArray {
+    suspend fun generateComposite(
+        traitsBytes: List<Pair<String, ByteArray>>
+    ): ByteArray {
+
         val imageUrls = traitsBytes.map { (mime, bytes) ->
             val b64 = Base64.getEncoder().encodeToString(bytes)
             "data:$mime;base64,$b64"
@@ -26,82 +29,112 @@ class CompositeCombiner : KoinComponent {
         )
 
         return PlaywrightPool.execute { browser ->
+
             val context = browser.newContext(
                 Browser.NewContextOptions()
-                    .setViewportSize(ViewportSize(PNG_WIDTH, PNG_HEIGHT))
+                    .setViewportSize(
+                        ViewportSize(PNG_WIDTH, PNG_HEIGHT)
+                    )
                     .setDeviceScaleFactor(1.0)
             )
 
             context.use { ctx ->
-                val page = ctx.newPage()
-                page.setContent(htmlContent)
-                preparePage(page, getPngArgs())
 
-                // Wait for initial load and image decodes
+                val page = ctx.newPage()
+
+                // ---------------------------------------------------------
+                // Load page
+                // ---------------------------------------------------------
+
+                page.setContent(htmlContent)
+
                 page.waitForLoadState(LoadState.LOAD)
+
+                // ---------------------------------------------------------
+                // Wait for every image to actually load
+                // ---------------------------------------------------------
+
                 page.waitForFunction(
-                    "Array.from(document.images).every(img => img.complete && img.naturalWidth > 0)"
+                    """
+                    () => Array.from(document.images).every(
+                        img => img.complete &&
+                               img.naturalWidth > 0 &&
+                               img.naturalHeight > 0
+                    )
+                    """.trimIndent()
                 )
 
+                // ---------------------------------------------------------
+                // Decode every image
+                // ---------------------------------------------------------
 
-                // Freeze frame by drawing each image onto a smooth-scaled canvas asynchronously
                 page.evaluate(
                     """
-    async (args) => {
-        const images = Array.from(document.querySelectorAll('img'));
-        
-        const processImage = (img) => {
-            return new Promise((resolve) => {
-                const ratio = img.naturalWidth / img.naturalHeight;
-                
-                let targetW = args.IMAGE_WIDTH;
-                let targetH = args.IMAGE_HEIGHT;
+                    async () => {
+                        const images = Array.from(document.images);
 
-                if (Math.abs(ratio - 0.75) > 0.01) {
-                    targetW = args.TRAIT_WIDTH;
-                    targetH = args.TRAIT_HEIGHT;
-                }
-
-                // Skip upscaling if the image is already at or above target resolution
-                if (img.naturalWidth >= targetW && img.naturalHeight >= targetH) {
-                    resolve();
-                    return;
-                }
-
-                const canvas = document.createElement('canvas');
-                canvas.width = targetW;
-                canvas.height = targetH;
-
-                const ctx = canvas.getContext('2d');
-                
-                ctx.imageSmoothingEnabled = true;
-                ctx.webkitImageSmoothingEnabled = true;
-                ctx.mozImageSmoothingEnabled = true;
-                ctx.msImageSmoothingEnabled = true;
-                ctx.imageSmoothingQuality = 'high';
-
-                ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, targetW, targetH);
-
-                // Wait for the new src to finish decoding/loading before resolving
-                img.onload = () => resolve();
-                img.onerror = () => resolve(); // Prevent hanging if load fails
-                
-                img.src = canvas.toDataURL('image/png');
-            });
-        };
-
-        await Promise.all(images.map(processImage));
-    }
-    """.trimIndent(), getPngArgs()
+                        await Promise.all(
+                            images.map(async (img) => {
+                                if (typeof img.decode === 'function') {
+                                    try {
+                                        await img.decode();
+                                    } catch (_) {
+                                        // Ignore decode errors.
+                                    }
+                                }
+                            })
+                        );
+                    }
+                    """.trimIndent()
                 )
 
-                // Ensure all swapped data-URL images have completed rendering
+                // ---------------------------------------------------------
+                // Apply your page styling AFTER images are available
+                // ---------------------------------------------------------
+
+                preparePage(page, getPngArgs())
+
+                // ---------------------------------------------------------
+                // Wait again because preparePage may alter the DOM/CSS
+                // ---------------------------------------------------------
+
                 page.waitForFunction(
-                    "Array.from(document.images).every(img => img.complete)"
+                    """
+                    () => Array.from(document.images).every(
+                        img => img.complete &&
+                               img.naturalWidth > 0 &&
+                               img.naturalHeight > 0
+                    )
+                    """.trimIndent()
                 )
 
-                // Capture directly to in-memory bytes without writing to disk
-                page.screenshot(
+                page.evaluate(
+                    """
+                    async () => {
+                        const images = Array.from(document.images);
+
+                        await Promise.all(
+                            images.map(async (img) => {
+                                if (typeof img.decode === 'function') {
+                                    try {
+                                        await img.decode();
+                                    } catch (_) {}
+                                }
+                            })
+                        );
+
+                        // Allow browser to paint the final composition.
+                        await new Promise(requestAnimationFrame);
+                        await new Promise(requestAnimationFrame);
+                    }
+                    """.trimIndent()
+                )
+
+                // ---------------------------------------------------------
+                // Screenshot
+                // ---------------------------------------------------------
+
+                return@execute page.screenshot(
                     Page.ScreenshotOptions()
                         .setType(ScreenshotType.PNG)
                         .setOmitBackground(false)
