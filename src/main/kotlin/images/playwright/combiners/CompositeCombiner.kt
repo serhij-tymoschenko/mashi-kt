@@ -44,50 +44,55 @@ class CompositeCombiner : KoinComponent {
                 )
 
 
-                // Freeze frame by drawing each image onto a canvas with smoothing explicitly disabled
+                // Freeze frame by drawing each image onto a smooth-scaled canvas asynchronously
                 page.evaluate(
                     """
-    (args) => {
-        for (const img of document.querySelectorAll('img')) {
-            const canvas = document.createElement('canvas');
-            
-            // Draw onto target size canvas to avoid layout scale blur
-            canvas.width = args.IMAGE_WIDTH;
-            canvas.height = args.IMAGE_HEIGHT;
-            
-            const ctx = canvas.getContext('2d');
-            
-            // Enable smooth scaling algorithms
-            ctx.imageSmoothingEnabled = true;
-            ctx.webkitImageSmoothingEnabled = true;
-            ctx.mozImageSmoothingEnabled = true;
-            ctx.msImageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
+    async (args) => {
+        const images = Array.from(document.querySelectorAll('img'));
+        
+        const processImage = (img) => {
+            return new Promise((resolve) => {
+                const ratio = img.naturalWidth / img.naturalHeight;
+                
+                let targetW = args.IMAGE_WIDTH;
+                let targetH = args.IMAGE_HEIGHT;
 
-            const padX = (args.IMAGE_WIDTH - args.TRAIT_WIDTH) / 2;
-            const padY = (args.IMAGE_HEIGHT - args.TRAIT_HEIGHT) / 2;
-            const ratio = img.naturalWidth / img.naturalHeight;
+                if (Math.abs(ratio - 0.75) > 0.01) {
+                    targetW = args.TRAIT_WIDTH;
+                    targetH = args.TRAIT_HEIGHT;
+                }
 
-            let drawX = 0;
-            let drawY = 0;
-            let drawW = args.IMAGE_WIDTH;
-            let drawH = args.IMAGE_HEIGHT;
+                // Skip upscaling if the image is already at or above target resolution
+                if (img.naturalWidth >= targetW && img.naturalHeight >= targetH) {
+                    resolve();
+                    return;
+                }
 
-            if (Math.abs(ratio - 0.75) > 0.01) {
-                drawX = padX;
-                drawY = padY;
-                drawW = args.TRAIT_WIDTH;
-                drawH = args.TRAIT_HEIGHT;
-            }
+                const canvas = document.createElement('canvas');
+                canvas.width = targetW;
+                canvas.height = targetH;
 
-            // Draw image smoothly onto canvas
-            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, drawX, drawY, drawW, drawH);
-            
-            // Swap src with smoothed high-res data URL
-            img.src = canvas.toDataURL('image/png');
-        }
+                const ctx = canvas.getContext('2d');
+                
+                ctx.imageSmoothingEnabled = true;
+                ctx.webkitImageSmoothingEnabled = true;
+                ctx.mozImageSmoothingEnabled = true;
+                ctx.msImageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+
+                ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, targetW, targetH);
+
+                // Wait for the new src to finish decoding/loading before resolving
+                img.onload = () => resolve();
+                img.onerror = () => resolve(); // Prevent hanging if load fails
+                
+                img.src = canvas.toDataURL('image/png');
+            });
+        };
+
+        await Promise.all(images.map(processImage));
     }
-                """.trimIndent(), getPngArgs()
+    """.trimIndent(), getPngArgs()
                 )
 
                 // Ensure all swapped data-URL images have completed rendering
