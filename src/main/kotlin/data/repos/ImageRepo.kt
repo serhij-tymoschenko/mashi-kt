@@ -91,12 +91,11 @@ class ImageRepo : KoinComponent {
             return@withContext Pair(bytes, bytes.size.toLong())
         }
 
-        // 2. GIF: Render in temp directory (/dev/shm if present)
-        val baseDir = Paths.get("/dev/shm").takeIf { Files.exists(it) }
-            ?: Paths.get(System.getProperty("java.io.tmpdir")).resolve("mashi-temp")
-        Files.createDirectories(baseDir)
+        // 2. GIF: Render in system temp directory (/tmp) instead of /dev/shm
+        val sysTmpDir = Paths.get(System.getProperty("java.io.tmpdir")).resolve("mashi-temp")
+        Files.createDirectories(sysTmpDir)
 
-        val uniqueDir = Files.createTempDirectory(baseDir, "anim-")
+        val uniqueDir = Files.createTempDirectory(sysTmpDir, "anim-")
 
         try {
             traitsWithMime.forEachIndexed { index, (mime, bytes) ->
