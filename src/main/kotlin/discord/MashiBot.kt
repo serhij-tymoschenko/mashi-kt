@@ -25,7 +25,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 class MashiBot private constructor(val kord: Kord) : KoinComponent {
-    private val reactionsDao by inject<ReactionsDao>()
     private val animService by inject<AnimService>()
 
     companion object {
@@ -60,8 +59,7 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
         return null
     }
 
-    @OptIn(PrivilegedIntent::class)
-    suspend fun setup() {
+    fun setup() {
         MashupModule(kord)
         WalletModule(kord)
         RebootModule(kord)
@@ -102,9 +100,12 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
                         channel.createMessage {
                             content = "<@&$roleId>"
 
-                            addFile(fileName, ChannelProvider(anim.size.toLong()) {
-                                ByteReadChannel(anim)
-                            })
+                            addFile(
+                                name = fileName,
+                                contentProvider = ChannelProvider(size = anim.size.toLong()) {
+                                    ByteReadChannel(anim)
+                                }
+                            )
 
                             embed {
                                 val builtEmbed = getNotifyEmbed(data, isRelease)
