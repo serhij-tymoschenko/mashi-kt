@@ -1,7 +1,6 @@
 ﻿package com.mashiverse.discord
 
 import com.mashiverse.configs.*
-import com.mashiverse.data.db.daos.ReactionsDao
 import com.mashiverse.data.remote.dto.NotifyDto
 import com.mashiverse.discord.modules.MashupModule
 import com.mashiverse.discord.modules.RebootModule
@@ -13,10 +12,6 @@ import dev.kord.core.Kord
 import dev.kord.core.behavior.channel.createMessage
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.channel.TextChannel
-import dev.kord.core.event.message.ReactionAddEvent
-import dev.kord.core.event.message.ReactionRemoveEvent
-import dev.kord.core.on
-import dev.kord.gateway.PrivilegedIntent
 import dev.kord.rest.builder.message.allowedMentions
 import dev.kord.rest.builder.message.embed
 import io.ktor.client.request.forms.*
@@ -83,7 +78,10 @@ class MashiBot private constructor(val kord: Kord) : KoinComponent {
                             title = builtEmbed.title
                             url = builtEmbed.url
                             color = builtEmbed.color
-                            image = builtEmbed.image
+                            image = builtEmbed.image ?: data.assets.composite.replace(
+                                "ipfs://",
+                                "https://ipfs.filebase.io/ipfs/"
+                            )
                             footer = builtEmbed.footer
                             fields = builtEmbed.fields
                         }
