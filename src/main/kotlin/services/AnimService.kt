@@ -71,7 +71,7 @@ class AnimService : KoinComponent {
 
             imageRepo.getImage(
                 mashup = mashup,
-                downloadType = DownloadType.GIF
+                downloadType = DownloadType.SMALLER_GIF
             )
         } catch (e: Exception) {
             println("Error in generateAnim: ${e.message}")
