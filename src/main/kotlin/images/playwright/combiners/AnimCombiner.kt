@@ -134,10 +134,7 @@ class AnimCombiner : KoinComponent {
         executeCmd(
             "gifsicle",
             "-b",
-            "-O3",
-            "--lossy=80",
-            "--colors", "256",
-            "--careful",
+            "-O2",
             "--no-comments",
             "--no-names",
             "--no-extensions",
